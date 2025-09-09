@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "lgNxhiW5hxM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\enest\\CursorProjects\\pusula\\Pusula.Api\\Pusula.Api.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\enest\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.8\\microsoft.aspnetcore.openapi.9.0.8.nupkg.sha512",
+    "C:\\Users\\enest\\.nuget\\packages\\microsoft.openapi\\1.6.17\\microsoft.openapi.1.6.17.nupkg.sha512"
+  ],
+  "logs": []
+}
