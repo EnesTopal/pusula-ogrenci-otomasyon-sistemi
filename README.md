@@ -32,18 +32,19 @@ Github Linki ile kullandığınız uygulama üzerinden kopyalayabilir veya termi
 
 
 ## Test Kullanıcı Bilgileri
-Aşağıda 3 farklı rol türünde de kullanıcıların hesap bilgileri veirlmiştir.
+Aşağıda 3 farklı rol türünde de kullanıcıların hesap bilgileri verilmiştir.
 
-Admin
-Email:
-Password
+- **Admin**
+  - Email: ...
+  - Password: ...
 
-Teacher
-Email:
-Password
+- **Teacher**
+  - Email: ...
+  - Password: ...
 
-Student
-Email:
-Password
+- **Student**
+  - Email: ...
+  - Password: ...
 
-##Yapılmış olan bonus görevler
+
+## Yapılmış olan bonus görevler
