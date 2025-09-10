@@ -32,10 +32,12 @@
 		HttpResponseMessage res;
 		if (string.Equals(model.Role, "Teacher", StringComparison.OrdinalIgnoreCase))
 		{
+			Console.WriteLine("Teacher {0}, {1}, {2}", model.FullName, model.Email, model.Password);
 			res = await Api.PostAsync("api/teachers", new { FullName = model.FullName, Email = model.Email, Password = model.Password });
 		}
 		else
 		{
+			Console.WriteLine("Student {0}, {1}, {2}", model.FullName, model.Email, model.Password);
 			res = await Api.PostAsync("api/students", new { FullName = model.FullName, Email = model.Email, Password = model.Password });
 		}
 		if (res.IsSuccessStatusCode)

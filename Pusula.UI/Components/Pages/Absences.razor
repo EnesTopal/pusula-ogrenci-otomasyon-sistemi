@@ -5,11 +5,23 @@
 <h3>Absences</h3>
 
 <EditForm Model="query" OnValidSubmit="Load" FormName="absencesForm">
-	<div class="mb-2"><label>Student Id</label><InputText @bind-Value="query.StudentId" class="form-control" /></div>
+	<div class="mb-2">
+		<label>Student</label>
+		<InputSelect @bind-Value="query.StudentId" class="form-control">
+			<option value="">Select a student...</option>
+			@if (students != null)
+			{
+				@foreach (var student in students)
+				{
+					<option value="@student.Id">@student.FullName</option>
+				}
+			}
+		</InputSelect>
+	</div>
 	<button class="btn btn-secondary" type="submit">Load</button>
 </EditForm>
 
-@if (absences == null) { <p>Enter a student id and click Load.</p>; }
+@if (absences == null) { <p>Select a student and click Load.</p>; }
 else
 {
 	<table class="table">
@@ -25,9 +37,17 @@ else
 
 @code {
 	class AbsenceDto { public string Id { get; set; }=string.Empty; public string StudentId { get; set; }=string.Empty; public string CourseId { get; set; }=string.Empty; public DateTime Date { get; set; } public string? Reason { get; set; } }
+	class StudentDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime EnrollmentDate { get; set; } }
 	class Query { public string StudentId { get; set; } = string.Empty; }
 	Query query = new();
 	List<AbsenceDto>? absences;
+	List<StudentDto>? students;
+	
+	protected override async Task OnInitializedAsync()
+	{
+		students = await Api.GetAsync<List<StudentDto>>("api/students");
+	}
+	
 	async Task Load()
 	{
 		if (!string.IsNullOrWhiteSpace(query.StudentId))
