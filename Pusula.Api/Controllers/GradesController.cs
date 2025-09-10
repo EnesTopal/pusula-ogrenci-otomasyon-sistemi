@@ -18,7 +18,20 @@ namespace Pusula.Api.Controllers
 		[Authorize(Roles = "Teacher")]
 		public async Task<ActionResult<GradeDto>> Create([FromBody] CreateGradeRequest request)
 		{
-			var grade = new Grade { Id = Guid.NewGuid(), StudentId = Guid.Parse(request.StudentId), CourseId = Guid.Parse(request.CourseId), Value = request.Value, GivenAt = DateTime.UtcNow };
+			var courseId = Guid.Parse(request.CourseId);
+			var course = await _db.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+			if (course == null) return NotFound();
+
+		var userId = User.FindFirst("sub")?.Value
+			?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+		if (string.IsNullOrEmpty(userId)) return Unauthorized();
+		
+		// Find the teacher by UserId to get the Teacher.Id
+		var teacher = await _db.Teachers.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+		if (teacher == null || course.TeacherId != teacher.Id)
+			return Forbid();
+
+			var grade = new Grade { Id = Guid.NewGuid(), StudentId = Guid.Parse(request.StudentId), CourseId = courseId, Value = request.Value, GivenAt = DateTime.UtcNow };
 			_db.Grades.Add(grade);
 			await _db.SaveChangesAsync();
 			return Ok(new GradeDto(grade.Id.ToString(), grade.StudentId.ToString(), grade.CourseId.ToString(), grade.Value, grade.GivenAt));

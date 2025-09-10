@@ -25,6 +25,11 @@
                             <div class="nav-item px-3"><NavLink class="nav-link" href="/students">Students</NavLink></div>
                         </Authorized>
                     </AuthorizeView>
+                    <AuthorizeView Roles="Teacher">
+                        <Authorized Context="userTeacher">
+                            <div class="nav-item px-3"><NavLink class="nav-link" href="/my-courses">My Courses</NavLink></div>
+                        </Authorized>
+                    </AuthorizeView>
                     <AuthorizeView Roles="Admin">
                         <Authorized Context="userAdmin1">
                             <div class="nav-item px-3"><NavLink class="nav-link" href="/teachers">Teachers</NavLink></div>

@@ -1,8 +1,76 @@
 @page "/grades"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject Pusula.UI.Services.ApiClient Api
+@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
 
 <h3>Grades</h3>
+
+@if (isTeacher)
+{
+	<div class="card mb-3">
+		<div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" @onclick="ToggleAddGradeForm">
+			<h5 class="mb-0">Add New Grade</h5>
+			<i class="fas fa-chevron-@(showAddGradeForm ? "up" : "down")"></i>
+		</div>
+		@if (showAddGradeForm)
+		{
+			<div class="card-body">
+				<EditForm Model="newGrade" OnValidSubmit="AddGrade" FormName="addGradeForm">
+					<DataAnnotationsValidator />
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label for="courseSelect" class="form-label">Course</label>
+							<InputSelect id="courseSelect" @bind-Value="newGrade.CourseId" @onchange="OnCourseChanged" class="form-control">
+								<option value="">Select a course...</option>
+								@if (teacherCourses != null)
+								{
+									@foreach (var course in teacherCourses)
+									{
+										<option value="@course.Id">@course.Name</option>
+									}
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => newGrade.CourseId)" />
+						</div>
+						<div class="col-md-6 mb-3">
+							<label for="studentSelect" class="form-label">Student</label>
+							<InputSelect id="studentSelect" @bind-Value="newGrade.StudentId" class="form-control" disabled="@(string.IsNullOrEmpty(newGrade.CourseId))">
+								<option value="">Select a student...</option>
+								@if (courseStudents != null)
+								{
+									@foreach (var student in courseStudents)
+									{
+										<option value="@student.Id">@student.FullName</option>
+									}
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => newGrade.StudentId)" />
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label for="gradeValue" class="form-label">Grade</label>
+							<InputNumber id="gradeValue" @bind-Value="newGrade.Value" class="form-control" step="0.01" min="0" max="100" placeholder="Enter grade (0-100)" />
+							<ValidationMessage For="@(() => newGrade.Value)" />
+						</div>
+					</div>
+					<div class="d-flex gap-2">
+						<button type="submit" class="btn btn-primary" disabled="@isAddingGrade">
+							@if (isAddingGrade)
+							{
+								<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+							}
+							Add Grade
+						</button>
+						<button type="button" class="btn btn-secondary" @onclick="CancelAddGrade">Cancel</button>
+					</div>
+				</EditForm>
+			</div>
+		}
+	</div>
+}
 
 <EditForm Model="query" OnValidSubmit="Load" FormName="gradesForm">
 	<div class="mb-2">
@@ -40,23 +108,108 @@ else
 	class StudentDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime EnrollmentDate { get; set; } }
 	class CourseDto { public string Id { get; set; }=string.Empty; public string Name { get; set; }=string.Empty; public string? Description { get; set; } public int Status { get; set; } public string TeacherId { get; set; }=string.Empty; public string TeacherName { get; set; }=string.Empty; }
 	class Query { public string StudentId { get; set; } = string.Empty; }
+	class AddGradeRequest 
+	{ 
+		[Required(ErrorMessage = "Please select a course")]
+		public string CourseId { get; set; }=string.Empty; 
+		
+		[Required(ErrorMessage = "Please select a student")]
+		public string StudentId { get; set; }=string.Empty; 
+		
+		[Required(ErrorMessage = "Grade is required")]
+		[Range(0, 100, ErrorMessage = "Grade must be between 0 and 100")]
+		public decimal Value { get; set; } 
+	}
+	
 	Query query = new();
+	AddGradeRequest newGrade = new();
 	List<GradeDto>? grades;
 	List<StudentDto>? students;
 	List<CourseDto>? courses;
+	List<CourseDto>? teacherCourses;
+	List<StudentDto>? courseStudents;
 	Dictionary<string, string> courseNames = new();
+	bool isTeacher = false;
+	bool isAddingGrade = false;
+	bool showAddGradeForm = false;
 	
 	protected override async Task OnInitializedAsync()
 	{
+		// Check if user is teacher
+		var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+		isTeacher = authState.User.IsInRole("Teacher");
+		
+		// Load data
 		students = await Api.GetAsync<List<StudentDto>>("api/students");
 		courses = await Api.GetAsync<List<CourseDto>>("api/courses");
 		courseNames = courses?.ToDictionary(c => c.Id, c => c.Name) ?? new Dictionary<string, string>();
+		
+		// Load teacher courses if user is teacher
+		if (isTeacher)
+		{
+			teacherCourses = await Api.GetAsync<List<CourseDto>>("api/teachers/my-courses");
+		}
 	}
 	
 	async Task Load()
 	{
 		if (!string.IsNullOrWhiteSpace(query.StudentId))
 			grades = await Api.GetAsync<List<GradeDto>>($"api/grades/by-student/{query.StudentId}");
+	}
+	
+	async Task OnCourseChanged()
+	{
+		if (!string.IsNullOrEmpty(newGrade.CourseId))
+		{
+			courseStudents = await Api.GetAsync<List<StudentDto>>($"api/teachers/my-courses/{newGrade.CourseId}/students");
+		}
+		else
+		{
+			courseStudents = null;
+		}
+		newGrade.StudentId = string.Empty; // Reset student selection
+	}
+	
+	async Task AddGrade()
+	{
+		if (isAddingGrade) return;
+		
+		isAddingGrade = true;
+		try
+		{
+			await Api.PostAsync("api/grades", newGrade);
+			// Reset form and close
+			newGrade = new AddGradeRequest();
+			showAddGradeForm = false;
+			courseStudents = null;
+		}
+		catch (Exception ex)
+		{
+			// Handle error - you might want to show a toast or error message
+			Console.WriteLine($"Error adding grade: {ex.Message}");
+		}
+		finally
+		{
+			isAddingGrade = false;
+		}
+	}
+	
+	void CancelAddGrade()
+	{
+		newGrade = new AddGradeRequest();
+		showAddGradeForm = false;
+		courseStudents = null;
+	}
+	
+	void ToggleAddGradeForm()
+	{
+		showAddGradeForm = !showAddGradeForm;
+		if (!showAddGradeForm)
+		{
+			// Reset form when closing
+			newGrade = new AddGradeRequest();
+			courseStudents = null;
+		}
 	}
 	
 	string GetCourseName(string courseId)

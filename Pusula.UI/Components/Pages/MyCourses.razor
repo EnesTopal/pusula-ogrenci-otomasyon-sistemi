@@ -1,0 +1,326 @@
+@page "/my-courses"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject Pusula.UI.Services.ApiClient Api
+@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+
+<h3>My Courses</h3>
+
+@if (isTeacher)
+{
+	<div class="card mb-3">
+		<div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" @onclick="ToggleAddStudentForm">
+			<h5 class="mb-0">Add Student to Course</h5>
+			<i class="fas fa-chevron-@(showAddStudentForm ? "up" : "down")"></i>
+		</div>
+		@if (showAddStudentForm)
+		{
+			<div class="card-body">
+				<EditForm Model="addStudentRequest" OnValidSubmit="AddStudentToCourse" FormName="addStudentForm">
+					<DataAnnotationsValidator />
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label for="courseSelect" class="form-label">Course</label>
+							<InputSelect id="courseSelect" @bind-Value="addStudentRequest.CourseId" @onchange="OnCourseChanged" class="form-control">
+								<option value="">Select a course...</option>
+								@if (teacherCourses != null)
+								{
+									@foreach (var course in teacherCourses)
+									{
+										<option value="@course.Id">@course.Name</option>
+									}
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => addStudentRequest.CourseId)" />
+						</div>
+						<div class="col-md-6 mb-3">
+							<label for="studentSelect" class="form-label">Student</label>
+							<InputSelect id="studentSelect" @bind-Value="addStudentRequest.StudentId" class="form-control" disabled="@isLoadingAvailableStudents">
+								<option value="">@(isLoadingAvailableStudents ? "Loading students..." : "Select a student...")</option>
+								@if (availableStudents != null)
+								{
+									@foreach (var student in availableStudents)
+									{
+										<option value="@student.Id">@student.FullName</option>
+									}
+								}
+								else if (allStudents != null)
+								{
+									@foreach (var student in allStudents)
+									{
+										<option value="@student.Id">@student.FullName @(string.IsNullOrEmpty(addStudentRequest.CourseId) ? "(All Students)" : "")</option>
+									}
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => addStudentRequest.StudentId)" />
+							@if (isLoadingAvailableStudents)
+							{
+								<small class="text-muted">Loading students...</small>
+							}
+							else if (availableStudents != null)
+							{
+								<small class="text-muted">Available students: @availableStudents.Count</small>
+							}
+							else if (allStudents != null)
+							{
+								<small class="text-muted">Showing all students (@allStudents.Count total)</small>
+							}
+						</div>
+					</div>
+					<div class="d-flex gap-2">
+						<button type="submit" class="btn btn-primary" disabled="@isAddingStudent">
+							@if (isAddingStudent)
+							{
+								<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+							}
+							Add Student
+						</button>
+						<button type="button" class="btn btn-secondary" @onclick="CancelAddStudent">Cancel</button>
+					</div>
+				</EditForm>
+			</div>
+		}
+	</div>
+}
+
+@if (teacherCourses == null)
+{
+	<p>Loading courses...</p>
+}
+else if (!teacherCourses.Any())
+{
+	<p>You don't have any courses assigned yet.</p>
+}
+else
+{
+	<div class="row">
+		@foreach (var course in teacherCourses)
+		{
+			<div class="col-md-6 col-lg-4 mb-4">
+				<div class="card">
+					<div class="card-header d-flex justify-content-between align-items-center">
+						<h5 class="mb-0">@course.Name</h5>
+						<span class="badge bg-@(GetStatusColor(course.Status))">@course.Status</span>
+					</div>
+					<div class="card-body">
+						@if (!string.IsNullOrEmpty(course.Description))
+						{
+							<p class="card-text">@course.Description</p>
+						}
+						<div class="d-flex justify-content-between align-items-center">
+							<small class="text-muted">Teacher: @course.TeacherName</small>
+							<button class="btn btn-sm btn-outline-primary" @onclick="() => LoadCourseStudents(course.Id)">
+								View Students (@GetStudentCount(course.Id))
+							</button>
+						</div>
+					</div>
+					@if (courseStudents.ContainsKey(course.Id))
+					{
+						<div class="card-footer">
+							<h6>Enrolled Students:</h6>
+							@if (courseStudents[course.Id].Any())
+							{
+								<ul class="list-unstyled mb-0">
+									@foreach (var student in courseStudents[course.Id])
+									{
+										<li class="d-flex justify-content-between align-items-center">
+											<span>@student.FullName</span>
+											<button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveStudentFromCourse(course.Id, student.Id)">
+												<i class="fas fa-times"></i>
+											</button>
+										</li>
+									}
+								</ul>
+							}
+							else
+							{
+								<p class="text-muted mb-0">No students enrolled yet.</p>
+							}
+						</div>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
+@code {
+	class CourseDto { public string Id { get; set; }=string.Empty; public string Name { get; set; }=string.Empty; public string? Description { get; set; } public int Status { get; set; } public string TeacherId { get; set; }=string.Empty; public string TeacherName { get; set; }=string.Empty; }
+	class StudentDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime EnrollmentDate { get; set; } }
+	class AddStudentRequest 
+	{ 
+		[Required(ErrorMessage = "Please select a course")]
+		public string CourseId { get; set; }=string.Empty; 
+		
+		[Required(ErrorMessage = "Please select a student")]
+		public string StudentId { get; set; }=string.Empty; 
+	}
+	
+	List<CourseDto>? teacherCourses;
+	List<StudentDto>? allStudents;
+	List<StudentDto>? availableStudents;
+	Dictionary<string, List<StudentDto>> courseStudents = new();
+	AddStudentRequest addStudentRequest = new();
+	bool isTeacher = false;
+	bool isAddingStudent = false;
+	bool showAddStudentForm = false;
+	bool isLoadingAvailableStudents = false;
+	
+	protected override async Task OnInitializedAsync()
+	{
+		// Check if user is teacher
+		var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+		isTeacher = authState.User.IsInRole("Teacher");
+		
+		if (isTeacher)
+		{
+			try
+			{
+				// Load teacher courses
+				teacherCourses = await Api.GetAsync<List<CourseDto>>("api/teachers/my-courses");
+				Console.WriteLine($"Loaded {teacherCourses?.Count ?? 0} teacher courses");
+				
+				// Load all students for the dropdown
+				allStudents = await Api.GetAsync<List<StudentDto>>("api/students");
+				Console.WriteLine($"Loaded {allStudents?.Count ?? 0} students");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error loading data: {ex.Message}");
+			}
+		}
+	}
+	
+	async Task OnCourseChanged(ChangeEventArgs e)
+	{
+		addStudentRequest.CourseId = e.Value?.ToString() ?? string.Empty;
+		
+		if (!string.IsNullOrEmpty(addStudentRequest.CourseId))
+		{
+			isLoadingAvailableStudents = true;
+			availableStudents = null; // Clear previous results
+			addStudentRequest.StudentId = string.Empty; // Reset student selection
+			
+			try
+			{
+				Console.WriteLine($"Loading students for course ID: {addStudentRequest.CourseId}");
+				
+				// Load students for this course to filter out already enrolled ones
+				var enrolledStudents = await Api.GetAsync<List<StudentDto>>($"api/teachers/my-courses/{addStudentRequest.CourseId}/students");
+				Console.WriteLine($"Enrolled students response: {enrolledStudents?.Count ?? 0} students");
+				
+				var enrolledStudentIds = enrolledStudents?.Select(s => s.Id).ToHashSet() ?? new HashSet<string>();
+				Console.WriteLine($"Enrolled student IDs: {string.Join(", ", enrolledStudentIds)}");
+				
+				// Filter out already enrolled students
+				availableStudents = allStudents?.Where(s => !enrolledStudentIds.Contains(s.Id)).ToList();
+				
+				Console.WriteLine($"Course changed. All students: {allStudents?.Count ?? 0}, Enrolled: {enrolledStudentIds.Count}, Available: {availableStudents?.Count ?? 0}");
+				
+				// If no available students after filtering, show all students as fallback
+				if (availableStudents == null || !availableStudents.Any())
+				{
+					Console.WriteLine("No available students after filtering, showing all students as fallback");
+					availableStudents = allStudents;
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error loading course students: {ex.Message}");
+				availableStudents = allStudents; // Fallback to all students if there's an error
+			}
+			finally
+			{
+				isLoadingAvailableStudents = false;
+			}
+		}
+		else
+		{
+			availableStudents = null;
+			addStudentRequest.StudentId = string.Empty; // Reset student selection
+		}
+	}
+	
+	async Task AddStudentToCourse()
+	{
+		if (isAddingStudent) return;
+		
+		isAddingStudent = true;
+		try
+		{
+		await Api.PostAsync($"api/courses/{addStudentRequest.CourseId}/enrollments", new { StudentId = addStudentRequest.StudentId });
+		
+		// Refresh the course students for the selected course before resetting form
+		await LoadCourseStudents(addStudentRequest.CourseId);
+		
+		// Reset form
+		addStudentRequest = new AddStudentRequest();
+		showAddStudentForm = false;
+		availableStudents = null;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error adding student to course: {ex.Message}");
+		}
+		finally
+		{
+			isAddingStudent = false;
+		}
+	}
+	
+	async Task RemoveStudentFromCourse(string courseId, string studentId)
+	{
+		try
+		{
+			await Api.DeleteAsync($"api/courses/{courseId}/enrollments/{studentId}");
+			
+			// Refresh the course students
+			await LoadCourseStudents(courseId);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error removing student from course: {ex.Message}");
+		}
+	}
+	
+	async Task LoadCourseStudents(string courseId)
+	{
+		var students = await Api.GetAsync<List<StudentDto>>($"api/teachers/my-courses/{courseId}/students");
+		courseStudents[courseId] = students ?? new List<StudentDto>();
+	}
+	
+	void CancelAddStudent()
+	{
+		addStudentRequest = new AddStudentRequest();
+		showAddStudentForm = false;
+		availableStudents = null;
+	}
+	
+	void ToggleAddStudentForm()
+	{
+		showAddStudentForm = !showAddStudentForm;
+		if (!showAddStudentForm)
+		{
+			// Reset form when closing
+			addStudentRequest = new AddStudentRequest();
+			availableStudents = null;
+		}
+	}
+	
+	string GetStatusColor(int status)
+	{
+		return status switch
+		{
+			0 => "secondary", // NotStarted
+			1 => "primary",   // InProgress
+			2 => "success",   // Completed
+			_ => "secondary"
+		};
+	}
+	
+	int GetStudentCount(string courseId)
+	{
+		return courseStudents.TryGetValue(courseId, out var students) ? students.Count : 0;
+	}
+}

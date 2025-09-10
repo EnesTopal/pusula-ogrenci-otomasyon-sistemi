@@ -74,6 +74,87 @@ namespace Pusula.Api.Controllers
 			await _db.SaveChangesAsync();
 			return NoContent();
 		}
+
+	[HttpGet("my-courses")]
+	[Authorize(Roles = "Teacher")]
+	public async Task<IEnumerable<CourseDto>> GetMyCourses()
+	{
+		var userId = User.FindFirst("sub")?.Value
+			?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+		if (string.IsNullOrEmpty(userId)) return Enumerable.Empty<CourseDto>();
+
+		// First find the teacher by UserId
+		var teacher = await _db.Teachers
+			.Include(t => t.User)
+			.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+		
+		if (teacher == null) return Enumerable.Empty<CourseDto>();
+
+		var courses = await _db.Courses
+			.Where(c => c.TeacherId == teacher.Id)
+			.ToListAsync();
+		
+		return courses.Select(c => new CourseDto(
+			c.Id.ToString(),
+			c.Name,
+			c.Description,
+			(CourseStatusDto)c.Status,
+			c.TeacherId.ToString(),
+			teacher.User.FullName ?? string.Empty
+		));
+	}
+
+	[HttpGet("my-courses/{courseId}/students")]
+	[Authorize(Roles = "Teacher")]
+	public async Task<IEnumerable<StudentDto>> GetStudentsInMyCourse(Guid courseId)
+	{
+		Console.WriteLine($"GetStudentsInMyCourse called with courseId: {courseId}");
+		
+		var userId = User.FindFirst("sub")?.Value
+			?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+		if (string.IsNullOrEmpty(userId)) 
+		{
+			Console.WriteLine("No userId found");
+			return Enumerable.Empty<StudentDto>();
+		}
+
+		// First find the teacher by UserId
+		var teacher = await _db.Teachers
+			.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+		
+		if (teacher == null) 
+		{
+			Console.WriteLine("Teacher not found");
+			return Enumerable.Empty<StudentDto>();
+		}
+
+		// Verify the teacher owns this course
+		var course = await _db.Courses.FirstOrDefaultAsync(c => c.Id == courseId && c.TeacherId == teacher.Id);
+		if (course == null) 
+		{
+			Console.WriteLine($"Course not found or teacher doesn't own it. CourseId: {courseId}, TeacherId: {teacher.Id}");
+			return Enumerable.Empty<StudentDto>();
+		}
+
+		var enrollments = await _db.Enrollments
+			.Include(e => e.Student)
+			.ThenInclude(s => s.User)
+			.Where(e => e.CourseId == courseId)
+			.ToListAsync();
+
+		Console.WriteLine($"Found {enrollments.Count} enrollments for course {courseId}");
+
+		var result = enrollments.Select(e => new StudentDto(
+			e.Student.Id.ToString(),
+			e.Student.UserId.ToString(),
+			e.Student.User.Email ?? string.Empty,
+			e.Student.User.FullName ?? string.Empty,
+			e.Student.EnrollmentDate
+		)).ToList();
+
+		Console.WriteLine($"Returning {result.Count} students");
+		return result;
+	}
 	}
 }
 

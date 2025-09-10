@@ -32,7 +32,23 @@ namespace Pusula.UI.Services
 		public async Task<T?> GetAsync<T>(string url)
 		{
 			AttachAuth();
-			return await _httpClient.GetFromJsonAsync<T>(url);
+			try
+			{
+				var response = await _httpClient.GetAsync(url);
+				if (!response.IsSuccessStatusCode)
+				{
+					Console.WriteLine($"API Error: {response.StatusCode} - {response.ReasonPhrase}");
+					var content = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"Response content: {content}");
+					return default(T);
+				}
+				return await response.Content.ReadFromJsonAsync<T>();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"API Exception: {ex.Message}");
+				return default(T);
+			}
 		}
 
 		public async Task<HttpResponseMessage> PostAsync<T>(string url, T body)

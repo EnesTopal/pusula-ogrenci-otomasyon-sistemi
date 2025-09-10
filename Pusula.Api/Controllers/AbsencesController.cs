@@ -21,11 +21,14 @@ namespace Pusula.Api.Controllers
     		var course = await _db.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
     		if (course == null) return NotFound();
 
-    		var userId = User.FindFirst("sub")?.Value
-    		    ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
-    		if (string.IsNullOrEmpty(userId)) return Unauthorized();
-    		if (course.TeacherId.ToString() != userId)
-        	return Forbid();
+		var userId = User.FindFirst("sub")?.Value
+		    ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+		if (string.IsNullOrEmpty(userId)) return Unauthorized();
+		
+		// Find the teacher by UserId to get the Teacher.Id
+		var teacher = await _db.Teachers.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+		if (teacher == null || course.TeacherId != teacher.Id)
+			return Forbid();
 
 			var a = new Pusula.Api.Domain.Absence { Id = Guid.NewGuid(), StudentId = Guid.Parse(request.StudentId), CourseId = Guid.Parse(request.CourseId), Date = request.Date, Reason = request.Reason };
 			_db.Absences.Add(a);

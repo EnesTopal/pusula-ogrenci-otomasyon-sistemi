@@ -82,30 +82,48 @@ namespace Pusula.Api.Controllers
 			return NoContent();
 		}
 
-		[HttpPost("{id}/enrollments")]
-		[Authorize(Roles = "Teacher")]
-		public async Task<IActionResult> Enroll(Guid id, [FromBody] EnrollmentRequest request)
-		{
-			var course = await _db.Courses.FirstOrDefaultAsync(c => c.Id == id);
-			if (course == null) return NotFound();
-			var studentId = Guid.Parse(request.StudentId);
-			if (!await _db.Students.AnyAsync(s => s.Id == studentId)) return BadRequest("Student not found");
-			if (await _db.Enrollments.AnyAsync(e => e.CourseId == id && e.StudentId == studentId)) return Conflict("Already enrolled");
-			_db.Enrollments.Add(new Enrollment { Id = Guid.NewGuid(), CourseId = id, StudentId = studentId, EnrolledAt = DateTime.UtcNow });
-			await _db.SaveChangesAsync();
-			return NoContent();
-		}
+	[HttpPost("{id}/enrollments")]
+	[Authorize(Roles = "Teacher")]
+	public async Task<IActionResult> Enroll(Guid id, [FromBody] EnrollmentRequest request)
+	{
+		var course = await _db.Courses.FirstOrDefaultAsync(c => c.Id == id);
+		if (course == null) return NotFound();
+		
+		// Verify the teacher owns this course
+		var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+		if (string.IsNullOrEmpty(userId)) return Unauthorized();
+		
+		var teacher = await _db.Teachers.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+		if (teacher == null || course.TeacherId != teacher.Id) return Forbid();
+		
+		var studentId = Guid.Parse(request.StudentId);
+		if (!await _db.Students.AnyAsync(s => s.Id == studentId)) return BadRequest("Student not found");
+		if (await _db.Enrollments.AnyAsync(e => e.CourseId == id && e.StudentId == studentId)) return Conflict("Already enrolled");
+		_db.Enrollments.Add(new Enrollment { Id = Guid.NewGuid(), CourseId = id, StudentId = studentId, EnrolledAt = DateTime.UtcNow });
+		await _db.SaveChangesAsync();
+		return NoContent();
+	}
 
-		[HttpDelete("{id}/enrollments/{studentId}")]
-		[Authorize(Roles = "Teacher")]
-		public async Task<IActionResult> Unenroll(Guid id, Guid studentId)
-		{
-			var e = await _db.Enrollments.FirstOrDefaultAsync(e => e.CourseId == id && e.StudentId == studentId);
-			if (e == null) return NotFound();
-			_db.Enrollments.Remove(e);
-			await _db.SaveChangesAsync();
-			return NoContent();
-		}
+	[HttpDelete("{id}/enrollments/{studentId}")]
+	[Authorize(Roles = "Teacher")]
+	public async Task<IActionResult> Unenroll(Guid id, Guid studentId)
+	{
+		// Verify the teacher owns this course
+		var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+		if (string.IsNullOrEmpty(userId)) return Unauthorized();
+		
+		var teacher = await _db.Teachers.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+		if (teacher == null) return Forbid();
+		
+		var course = await _db.Courses.FirstOrDefaultAsync(c => c.Id == id);
+		if (course == null || course.TeacherId != teacher.Id) return Forbid();
+		
+		var e = await _db.Enrollments.FirstOrDefaultAsync(e => e.CourseId == id && e.StudentId == studentId);
+		if (e == null) return NotFound();
+		_db.Enrollments.Remove(e);
+		await _db.SaveChangesAsync();
+		return NoContent();
+	}
 
 		[HttpPost("{id}/comments")]
 		[Authorize(Roles = "Teacher")]
