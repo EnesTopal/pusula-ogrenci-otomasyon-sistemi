@@ -67,6 +67,7 @@ namespace Pusula.Api.Controllers
 		[AllowAnonymous]
 		public async Task<IActionResult> Login([FromBody] LoginRequest request)
 		{
+			Console.WriteLine($"LOGIN TRY: '{request.Email}', '{request.Password}'");
 			var user = await _userManager.FindByEmailAsync(request.Email);
 			if (user == null) return Unauthorized();
 
