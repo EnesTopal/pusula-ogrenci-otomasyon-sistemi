@@ -1,0 +1,26 @@
+@inject NavigationManager Nav
+
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var current = new Uri(Nav.Uri);
+        var pathAndQuery = current.PathAndQuery;
+
+        // Avoid loop if already on /login
+        if (pathAndQuery.StartsWith("/login", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var returnUrl = Uri.EscapeDataString(pathAndQuery);
+        Nav.NavigateTo($"/login?returnUrl={returnUrl}", forceLoad: true);
+    }
+}
+
+
+
+
+
+

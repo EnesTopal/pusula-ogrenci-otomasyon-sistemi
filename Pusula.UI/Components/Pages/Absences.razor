@@ -1,0 +1,38 @@
+@page "/absences"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject Pusula.UI.Services.ApiClient Api
+
+<h3>Absences</h3>
+
+<EditForm Model="query" OnValidSubmit="Load" FormName="absencesForm">
+	<div class="mb-2"><label>Student Id</label><InputText @bind-Value="query.StudentId" class="form-control" /></div>
+	<button class="btn btn-secondary" type="submit">Load</button>
+</EditForm>
+
+@if (absences == null) { <p>Enter a student id and click Load.</p>; }
+else
+{
+	<table class="table">
+		<thead><tr><th>Course</th><th>Date</th><th>Reason</th></tr></thead>
+		<tbody>
+			@foreach (var a in absences)
+			{
+				<tr><td>@a.CourseId</td><td>@a.Date.ToShortDateString()</td><td>@a.Reason</td></tr>
+			}
+		</tbody>
+	</table>
+}
+
+@code {
+	class AbsenceDto { public string Id { get; set; }=string.Empty; public string StudentId { get; set; }=string.Empty; public string CourseId { get; set; }=string.Empty; public DateTime Date { get; set; } public string? Reason { get; set; } }
+	class Query { public string StudentId { get; set; } = string.Empty; }
+	Query query = new();
+	List<AbsenceDto>? absences;
+	async Task Load()
+	{
+		if (!string.IsNullOrWhiteSpace(query.StudentId))
+			absences = await Api.GetAsync<List<AbsenceDto>>($"api/absences/by-student/{query.StudentId}");
+	}
+}
+
+

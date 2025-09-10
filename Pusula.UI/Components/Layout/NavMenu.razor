@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject Pusula.UI.Services.AuthStateProvider Auth
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Pusula.UI</a>
     </div>
@@ -7,12 +10,54 @@
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-    </nav>
+    <CascadingAuthenticationState>
+        <AuthorizeView>
+            <Authorized Context="user">
+                <nav class="nav flex-column">
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3"><NavLink class="nav-link" href="/courses">Courses</NavLink></div>
+                    <AuthorizeView Roles="Admin,Teacher">
+                        <Authorized Context="userAT">
+                            <div class="nav-item px-3"><NavLink class="nav-link" href="/students">Students</NavLink></div>
+                        </Authorized>
+                    </AuthorizeView>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized Context="userAdmin1">
+                            <div class="nav-item px-3"><NavLink class="nav-link" href="/teachers">Teachers</NavLink></div>
+                        </Authorized>
+                    </AuthorizeView>
+                    <div class="nav-item px-3"><NavLink class="nav-link" href="/grades">Grades</NavLink></div>
+                    <div class="nav-item px-3"><NavLink class="nav-link" href="/absences">Absences</NavLink></div>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized Context="userAdmin2">
+                            <div class="nav-item px-3"><NavLink class="nav-link" href="/register">Register</NavLink></div>
+                        </Authorized>
+                    </AuthorizeView>
+                    <div class="nav-item px-3"><button class="btn btn-link" @onclick="Logout">Logout</button></div>
+                </nav>
+            </Authorized>
+            <NotAuthorized>
+                <nav class="nav flex-column">
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3"><NavLink class="nav-link" href="/login">Login</NavLink></div>
+                </nav>
+            </NotAuthorized>
+        </AuthorizeView>
+    </CascadingAuthenticationState>
 </div>
+
+@code {
+	void Logout()
+	{
+		Auth.SetToken(null);
+	}
+}
 

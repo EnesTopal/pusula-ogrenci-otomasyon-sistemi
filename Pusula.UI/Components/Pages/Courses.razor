@@ -1,0 +1,30 @@
+@page "/courses"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject Pusula.UI.Services.ApiClient Api
+
+<h3>Courses</h3>
+
+@if (courses == null) { <p>Loading...</p>; }
+else
+{
+	<table class="table">
+		<thead><tr><th>Name</th><th>Teacher</th><th>Status</th></tr></thead>
+		<tbody>
+			@foreach (var c in courses)
+			{
+				<tr><td>@c.Name</td><td>@c.TeacherName</td><td>@c.Status</td></tr>
+			}
+		</tbody>
+	</table>
+}
+
+@code {
+	class CourseDto { public string Id { get; set; }=string.Empty; public string Name { get; set; }=string.Empty; public string? Description { get; set; } public int Status { get; set; } public string TeacherId { get; set; }=string.Empty; public string TeacherName { get; set; }=string.Empty; }
+	List<CourseDto>? courses;
+	protected override async Task OnInitializedAsync()
+	{
+		courses = await Api.GetAsync<List<CourseDto>>("api/courses");
+	}
+}
+
+

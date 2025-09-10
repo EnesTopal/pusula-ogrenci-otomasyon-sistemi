@@ -1,0 +1,48 @@
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+@page "/register"
+@using System.Net.Http.Json
+@inject Pusula.UI.Services.ApiClient Api
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
+
+<h3>Register</h3>
+
+<EditForm Model="model" OnValidSubmit="HandleRegister" FormName="registerForm">
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+	<div class="mb-2"><label>Full Name</label><InputText @bind-Value="model.FullName" class="form-control" /></div>
+	<div class="mb-2"><label>Email</label><InputText @bind-Value="model.Email" class="form-control" /></div>
+	<div class="mb-2"><label>Password</label><InputText @bind-Value="model.Password" class="form-control" type="password" /></div>
+	<div class="mb-2">
+		<label>Role</label>
+		<InputSelect @bind-Value="model.Role" class="form-select">
+			<option>Student</option>
+			<option>Teacher</option>
+		</InputSelect>
+	</div>
+	<button class="btn btn-primary" type="submit">Register</button>
+</EditForm>
+
+@code {
+	class RegisterModel { public string FullName { get; set; } = string.Empty; public string Email { get; set; } = string.Empty; public string Password { get; set; } = string.Empty; public string Role { get; set; } = "Student"; }
+	RegisterModel model = new();
+
+	async Task HandleRegister()
+	{
+		HttpResponseMessage res;
+		if (string.Equals(model.Role, "Teacher", StringComparison.OrdinalIgnoreCase))
+		{
+			res = await Api.PostAsync("api/teachers", new { FullName = model.FullName, Email = model.Email, Password = model.Password });
+		}
+		else
+		{
+			res = await Api.PostAsync("api/students", new { FullName = model.FullName, Email = model.Email, Password = model.Password });
+		}
+		if (res.IsSuccessStatusCode)
+		{
+			Nav.NavigateTo("/");
+		}
+	}
+}
+
+

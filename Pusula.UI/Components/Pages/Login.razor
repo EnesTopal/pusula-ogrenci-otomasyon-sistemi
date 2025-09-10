@@ -1,0 +1,49 @@
+@page "/login"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@using System.Net.Http.Json
+@inject Pusula.UI.Services.ApiClient Api
+@inject Pusula.UI.Services.AuthStateProvider Auth
+@inject NavigationManager Nav
+
+<h3>Login</h3>
+
+<EditForm Model="model" OnValidSubmit="HandleLogin" FormName="loginForm">
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+	<div class="mb-2">
+		<label>Email</label>
+		<InputText @bind-Value="model.Email" class="form-control" />
+	</div>
+	<div class="mb-2">
+		<label>Password</label>
+		<InputText @bind-Value="model.Password" class="form-control" type="password" />
+	</div>
+	<button class="btn btn-primary" type="submit">Login</button>
+</EditForm>
+
+@code {
+	class LoginModel { public string Email { get; set; } = string.Empty; public string Password { get; set; } = string.Empty; }
+	LoginModel model = new();
+
+	async Task HandleLogin()
+	{
+		model.Email = model.Email?.Trim();
+    	model.Password = model.Password?.Trim();
+    	Console.WriteLine($"UI LOGIN: '{model.Email}', password{model.Password}");
+
+		var res = await Api.PostAsync("api/auth/login", model);
+		if (res.IsSuccessStatusCode)
+		{
+			var payload = await res.Content.ReadFromJsonAsync<AuthResponse>();
+			Auth.SetToken(payload?.Token);
+			var uri = new Uri(Nav.Uri);
+			var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+			var returnUrl = query.Get("returnUrl");
+			Nav.NavigateTo(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl);
+		}
+	}
+
+	public class AuthResponse { public string Token { get; set; } = string.Empty; public string Email { get; set; } = string.Empty; public string Role { get; set; } = string.Empty; public string FullName { get; set; } = string.Empty; public string UserId { get; set; } = string.Empty; }
+}
+
+

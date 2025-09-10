@@ -1,0 +1,30 @@
+@page "/teachers"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+@inject Pusula.UI.Services.ApiClient Api
+
+<h3>Teachers</h3>
+
+@if (teachers == null) { <p>Loading...</p>; }
+else
+{
+	<table class="table">
+		<thead><tr><th>Name</th><th>Email</th><th>Hire Date</th></tr></thead>
+		<tbody>
+			@foreach (var t in teachers)
+			{
+				<tr><td>@t.FullName</td><td>@t.Email</td><td>@t.HireDate.ToShortDateString()</td></tr>
+			}
+		</tbody>
+	</table>
+}
+
+@code {
+	class TeacherDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime HireDate { get; set; } }
+	List<TeacherDto>? teachers;
+	protected override async Task OnInitializedAsync()
+	{
+		teachers = await Api.GetAsync<List<TeacherDto>>("api/teachers");
+	}
+}
+
+

@@ -1,7 +1,45 @@
 ﻿@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using Microsoft.AspNetCore.Components.Authorization
 
 <PageTitle>Home</PageTitle>
 
-<h1>Pusula</h1>
+<h3>Dashboard</h3>
 
-<p>Welcome.</p>
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <ul>
+            <li><a href="/teachers">Manage Teachers</a></li>
+            <li><a href="/students">Manage Students</a></li>
+            <li><a href="/courses">Manage Courses</a></li>
+            <li><a href="/grades">Review Grades</a></li>
+            <li><a href="/absences">Review Absences</a></li>
+            <li><a href="/register">Create User (Student/Teacher)</a></li>
+        </ul>
+    </Authorized>
+    <NotAuthorized>
+    </NotAuthorized>
+    <Authorizing>
+    </Authorizing>
+</AuthorizeView>
+
+<AuthorizeView Roles="Teacher">
+    <Authorized>
+        <ul>
+            <li><a href="/courses">My Courses</a></li>
+            <li><a href="/students">Students</a></li>
+            <li><a href="/grades">Grades</a></li>
+            <li><a href="/absences">Absences</a></li>
+        </ul>
+    </Authorized>
+</AuthorizeView>
+
+<AuthorizeView Roles="Student">
+    <Authorized>
+        <ul>
+            <li><a href="/courses">Courses</a></li>
+            <li><a href="/grades">My Grades</a></li>
+            <li><a href="/absences">My Absences</a></li>
+        </ul>
+    </Authorized>
+</AuthorizeView>
