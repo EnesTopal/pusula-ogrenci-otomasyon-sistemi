@@ -4,6 +4,7 @@
 @inject Pusula.UI.Services.ApiClient Api
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthState
+@inject IJSRuntime JS
 
 <h3>Register</h3>
 
@@ -24,26 +25,41 @@
 </EditForm>
 
 @code {
+	
 	class RegisterModel { public string FullName { get; set; } = string.Empty; public string Email { get; set; } = string.Empty; public string Password { get; set; } = string.Empty; public string Role { get; set; } = "Student"; }
 	RegisterModel model = new();
+	string? errorMsg;
+	
 
 	async Task HandleRegister()
 	{
-		HttpResponseMessage res;
-		if (string.Equals(model.Role, "Teacher", StringComparison.OrdinalIgnoreCase))
-		{
-			Console.WriteLine("Teacher {0}, {1}, {2}", model.FullName, model.Email, model.Password);
-			res = await Api.PostAsync("api/teachers", new { FullName = model.FullName, Email = model.Email, Password = model.Password });
-		}
-		else
-		{
-			Console.WriteLine("Student {0}, {1}, {2}", model.FullName, model.Email, model.Password);
-			res = await Api.PostAsync("api/students", new { FullName = model.FullName, Email = model.Email, Password = model.Password });
-		}
-		if (res.IsSuccessStatusCode)
-		{
-			Nav.NavigateTo("/");
-		}
+		errorMsg = null;
+        HttpResponseMessage res;
+        var payload = new { FullName = model.FullName, Email = model.Email, Password = model.Password };
+
+        if (string.Equals(model.Role, "Teacher", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"Teacher {model.FullName}, {model.Email}, {model.Password}");
+            res = await Api.PostAsync("api/teachers", payload);
+        }
+        else
+        {
+            Console.WriteLine($"Student {model.FullName}, {model.Email}, {model.Password}");
+            res = await Api.PostAsync("api/students", payload);
+        }
+
+        if (res.IsSuccessStatusCode)
+        {
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            var body = await res.Content.ReadAsStringAsync();
+            Console.WriteLine($"Register failed: {(int)res.StatusCode} {res.StatusCode} - {body}");
+            errorMsg = $"Hata: {body}";
+			await JS.InvokeVoidAsync("alert", errorMsg);
+            StateHasChanged();
+        }
 	}
 }
 

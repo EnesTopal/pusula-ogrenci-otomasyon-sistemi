@@ -29,7 +29,7 @@ else
 		<tbody>
 			@foreach (var g in grades)
 			{
-				<tr><td>@g.CourseId</td><td>@g.Value</td><td>@g.GivenAt.ToShortDateString()</td></tr>
+				<tr><td>@GetCourseName(g.CourseId)</td><td>@g.Value</td><td>@g.GivenAt.ToShortDateString()</td></tr>
 			}
 		</tbody>
 	</table>
@@ -38,20 +38,30 @@ else
 @code {
 	class GradeDto { public string Id { get; set; }=string.Empty; public string StudentId { get; set; }=string.Empty; public string CourseId { get; set; }=string.Empty; public decimal Value { get; set; } public DateTime GivenAt { get; set; } }
 	class StudentDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime EnrollmentDate { get; set; } }
+	class CourseDto { public string Id { get; set; }=string.Empty; public string Name { get; set; }=string.Empty; public string? Description { get; set; } public int Status { get; set; } public string TeacherId { get; set; }=string.Empty; public string TeacherName { get; set; }=string.Empty; }
 	class Query { public string StudentId { get; set; } = string.Empty; }
 	Query query = new();
 	List<GradeDto>? grades;
 	List<StudentDto>? students;
+	List<CourseDto>? courses;
+	Dictionary<string, string> courseNames = new();
 	
 	protected override async Task OnInitializedAsync()
 	{
 		students = await Api.GetAsync<List<StudentDto>>("api/students");
+		courses = await Api.GetAsync<List<CourseDto>>("api/courses");
+		courseNames = courses?.ToDictionary(c => c.Id, c => c.Name) ?? new Dictionary<string, string>();
 	}
 	
 	async Task Load()
 	{
 		if (!string.IsNullOrWhiteSpace(query.StudentId))
 			grades = await Api.GetAsync<List<GradeDto>>($"api/grades/by-student/{query.StudentId}");
+	}
+	
+	string GetCourseName(string courseId)
+	{
+		return courseNames.TryGetValue(courseId, out var name) ? name : courseId;
 	}
 }
 
