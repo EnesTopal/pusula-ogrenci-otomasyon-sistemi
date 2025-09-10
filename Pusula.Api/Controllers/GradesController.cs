@@ -28,6 +28,18 @@ namespace Pusula.Api.Controllers
 		[Authorize(Roles = "Student,Teacher,Admin")]
 		public async Task<IEnumerable<GradeDto>> GetByStudent(Guid studentId)
 		{
+			if (User.IsInRole("Student"))
+    		{	
+        		var userId = User.FindFirst("sub")?.Value
+            		?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+
+        		if (!Guid.TryParse(userId, out var userGuid) || userGuid != studentId)
+        		{
+            		Response.StatusCode = StatusCodes.Status403Forbidden; 
+            		return Enumerable.Empty<GradeDto>();
+        		}
+    		}
+			
 			var list = await _db.Grades.Where(g => g.StudentId == studentId).ToListAsync();
 			return list.Select(g => new GradeDto(g.Id.ToString(), g.StudentId.ToString(), g.CourseId.ToString(), g.Value, g.GivenAt));
 		}
