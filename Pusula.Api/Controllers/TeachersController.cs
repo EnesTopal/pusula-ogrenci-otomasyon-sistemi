@@ -33,6 +33,7 @@ namespace Pusula.Api.Controllers
 		[Authorize(Roles = "Admin")]
 		public async Task<ActionResult<TeacherDto>> Create([FromBody] CreateTeacherRequest request)
 		{
+			Console.WriteLine("Create Teacher {0}, {1}, {2}", request.FullName, request.Email, request.Password);
 			var user = new ApplicationUser { UserName = request.Email, Email = request.Email, FullName = request.FullName };
 			var result = await _userManager.CreateAsync(user, request.Password);
 			if (!result.Succeeded) return BadRequest(result.Errors);
