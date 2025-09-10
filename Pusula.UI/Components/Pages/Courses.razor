@@ -1,8 +1,64 @@
 @page "/courses"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject Pusula.UI.Services.ApiClient Api
+@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
 
 <h3>Courses</h3>
+
+@if (isAdmin)
+{
+	<div class="card mb-3">
+		<div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" @onclick="ToggleCreateForm">
+			<h5 class="mb-0">Create New Course</h5>
+			<i class="fas fa-chevron-@(showCreateForm ? "up" : "down")"></i>
+		</div>
+		@if (showCreateForm)
+		{
+			<div class="card-body">
+				<EditForm Model="newCourse" OnValidSubmit="CreateCourse" FormName="createCourseForm">
+					<DataAnnotationsValidator />
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label for="courseName" class="form-label">Course Name</label>
+							<InputText id="courseName" @bind-Value="newCourse.Name" class="form-control" placeholder="Enter course name" />
+							<ValidationMessage For="@(() => newCourse.Name)" />
+						</div>
+						<div class="col-md-6 mb-3">
+							<label for="teacherSelect" class="form-label">Teacher</label>
+							<InputSelect id="teacherSelect" @bind-Value="newCourse.TeacherId" class="form-control">
+								<option value="">Select a teacher...</option>
+								@if (teachers != null)
+								{
+									@foreach (var teacher in teachers)
+									{
+										<option value="@teacher.Id">@teacher.FullName</option>
+									}
+								}
+							</InputSelect>
+							<ValidationMessage For="@(() => newCourse.TeacherId)" />
+						</div>
+					</div>
+					<div class="mb-3">
+						<label for="courseDescription" class="form-label">Description (Optional)</label>
+						<InputTextArea id="courseDescription" @bind-Value="newCourse.Description" class="form-control" rows="3" placeholder="Enter course description" />
+					</div>
+					<div class="d-flex gap-2">
+						<button type="submit" class="btn btn-primary" disabled="@isCreating">
+							@if (isCreating)
+							{
+								<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+							}
+							Create Course
+						</button>
+						<button type="button" class="btn btn-secondary" @onclick="CancelCreate">Cancel</button>
+					</div>
+				</EditForm>
+			</div>
+		}
+	</div>
+}
 
 @if (courses == null) { <p>Loading...</p>; }
 else
@@ -20,10 +76,80 @@ else
 
 @code {
 	class CourseDto { public string Id { get; set; }=string.Empty; public string Name { get; set; }=string.Empty; public string? Description { get; set; } public int Status { get; set; } public string TeacherId { get; set; }=string.Empty; public string TeacherName { get; set; }=string.Empty; }
+	class TeacherDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime HireDate { get; set; } }
+	class CreateCourseRequest 
+	{ 
+		[Required(ErrorMessage = "Course name is required")]
+		[StringLength(100, ErrorMessage = "Course name cannot exceed 100 characters")]
+		public string Name { get; set; }=string.Empty; 
+		
+		[StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+		public string? Description { get; set; } 
+		
+		[Required(ErrorMessage = "Please select a teacher")]
+		public string TeacherId { get; set; }=string.Empty; 
+	}
+	
 	List<CourseDto>? courses;
+	List<TeacherDto>? teachers;
+	CreateCourseRequest newCourse = new();
+	bool isAdmin = false;
+	bool isCreating = false;
+	bool showCreateForm = false;
+	
 	protected override async Task OnInitializedAsync()
 	{
+		// Check if user is admin
+		var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+		isAdmin = authState.User.IsInRole("Admin");
+		
+		// Load data
 		courses = await Api.GetAsync<List<CourseDto>>("api/courses");
+		if (isAdmin)
+		{
+			teachers = await Api.GetAsync<List<TeacherDto>>("api/teachers");
+		}
+	}
+	
+	async Task CreateCourse()
+	{
+		if (isCreating) return;
+		
+		isCreating = true;
+		try
+		{
+			await Api.PostAsync("api/courses", newCourse);
+			// Refresh courses list
+			courses = await Api.GetAsync<List<CourseDto>>("api/courses");
+			// Reset form and close
+			newCourse = new CreateCourseRequest();
+			showCreateForm = false;
+		}
+		catch (Exception ex)
+		{
+			// Handle error - you might want to show a toast or error message
+			Console.WriteLine($"Error creating course: {ex.Message}");
+		}
+		finally
+		{
+			isCreating = false;
+		}
+	}
+	
+	void CancelCreate()
+	{
+		newCourse = new CreateCourseRequest();
+		showCreateForm = false;
+	}
+	
+	void ToggleCreateForm()
+	{
+		showCreateForm = !showCreateForm;
+		if (!showCreateForm)
+		{
+			// Reset form when closing
+			newCourse = new CreateCourseRequest();
+		}
 	}
 }
 
