@@ -76,3 +76,4 @@ C:\Users\enest\CursorProjects\pusula\Pusula.UI\obj\Debug\net9.0\refint\Pusula.UI
 C:\Users\enest\CursorProjects\pusula\Pusula.UI\obj\Debug\net9.0\Pusula.UI.pdb
 C:\Users\enest\CursorProjects\pusula\Pusula.UI\obj\Debug\net9.0\Pusula.UI.genruntimeconfig.cache
 C:\Users\enest\CursorProjects\pusula\Pusula.UI\obj\Debug\net9.0\ref\Pusula.UI.dll
+C:\Users\enest\CursorProjects\pusula\Pusula.UI\obj\Debug\net9.0\Pusula.UI.sourcelink.json
