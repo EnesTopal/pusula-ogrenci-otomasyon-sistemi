@@ -1,43 +1,47 @@
 @page "/my-comments"
-@using Pusula.UI.Services
-@using Pusula.Api.DTOs
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize(Roles = "Student")]
-@inject ApiClient ApiClient
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Student")]
+@inject Pusula.UI.Services.ApiClient Api
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Authorization
+@using Pusula.Api.DTOs
 
 <PageTitle>My Comments</PageTitle>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <h1>My Comments</h1>
-            <p class="text-muted">Comments from your teachers about your performance in courses.</p>
+<h3>My Teacher Comments</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
     </div>
-
-    @if (isLoading)
-    {
-        <div class="text-center">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-    }
-    else if (comments == null || !comments.Any())
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <h4>Error Loading Comments</h4>
+        <p>@errorMessage</p>
+        <button class="btn btn-outline-danger" @onclick="RetryLoad">Retry</button>
+    </div>
+}
+else
+{
+    @if (currentStudent != null)
     {
         <div class="alert alert-info">
-            <h4>No Comments Yet</h4>
-            <p>You don't have any comments from your teachers yet. Comments will appear here once your teachers add them.</p>
+            <h5>Comments for @currentStudent.FullName</h5>
+            <p class="mb-0">Here are the comments your teachers have written about your performance.</p>
         </div>
     }
-    else
+
+    @if (comments != null && comments.Any())
     {
         <div class="row">
             @foreach (var comment in comments)
             {
-                <div class="col-md-6 col-lg-4 mb-4">
+                <div class="col-md-6 col-lg-4 mb-3">
                     <div class="card h-100">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="card-title mb-0">@comment.CourseName</h6>
@@ -45,49 +49,80 @@
                         </div>
                         <div class="card-body">
                             <p class="card-text">@comment.Comment</p>
-                            <div class="mt-auto">
-                                <small class="text-muted">
-                                    <i class="bi bi-person"></i> @comment.TeacherName
-                                </small>
-                            </div>
+                            <small class="text-muted">By: @comment.TeacherName</small>
                         </div>
                     </div>
                 </div>
             }
         </div>
     }
-</div>
+    else
+    {
+        <div class="alert alert-info">
+            <h5>No Comments Yet</h5>
+            <p class="mb-0">Your teachers haven't written any comments about your performance yet. Keep up the good work!</p>
+        </div>
+    }
+}
 
 @code {
-    private List<TeacherCommentWithDetailsDto>? comments;
     private bool isLoading = true;
-    private string? currentUserId;
+    private bool isStudent = false;
+    private string? errorMessage = null;
+    private StudentDto? currentStudent = null;
+    private List<TeacherCommentWithDetailsDto>? comments = null;
 
     protected override async Task OnInitializedAsync()
     {
+        // Check if user is student
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        isStudent = authState.User.IsInRole("Student");
         
-        if (user.Identity?.IsAuthenticated == true)
+        if (isStudent)
         {
-            currentUserId = user.FindFirst("sub")?.Value;
-            await LoadComments();
+            await LoadStudentComments();
+        }
+        else
+        {
+            errorMessage = "Access denied. This page is only for students.";
         }
         
         isLoading = false;
     }
 
-    private async Task LoadComments()
+    private async Task LoadStudentComments()
     {
-        if (currentUserId == null) return;
-
         try
         {
-            comments = await ApiClient.GetAsync<List<TeacherCommentWithDetailsDto>>($"api/teachercomments/student/{currentUserId}");
+            errorMessage = null;
+            
+            // Get current student info
+            currentStudent = await Api.GetAsync<StudentDto>("api/students/me");
+            if (currentStudent == null)
+            {
+                errorMessage = "Unable to load student information.";
+                return;
+            }
+            
+            // Load comments for this student
+            comments = await Api.GetAsync<List<TeacherCommentWithDetailsDto>>($"api/teachercomments/student/{currentStudent.Id}");
+            if (comments == null)
+            {
+                comments = new List<TeacherCommentWithDetailsDto>();
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading comments: {ex.Message}");
+            errorMessage = $"Error loading comments: {ex.Message}";
+            Console.WriteLine($"Error loading student comments: {ex.Message}");
         }
+    }
+
+    private async Task RetryLoad()
+    {
+        isLoading = true;
+        errorMessage = null;
+        await LoadStudentComments();
+        isLoading = false;
     }
 }

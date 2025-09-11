@@ -44,7 +44,15 @@ namespace Pusula.Api.Controllers
     		{
         		var userId = User.FindFirst("sub")?.Value
             		?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
-        		if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var currentUserId) || currentUserId != studentId)
+        		if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var currentUserId))
+        		{
+            		Response.StatusCode = StatusCodes.Status403Forbidden;
+            		return Enumerable.Empty<AbsenceDto>();
+        		}
+        		
+        		// Check if the student is accessing their own data
+        		var student = await _db.Students.FirstOrDefaultAsync(s => s.UserId == currentUserId);
+        		if (student == null || student.Id != studentId)
         		{
             		Response.StatusCode = StatusCodes.Status403Forbidden;
             		return Enumerable.Empty<AbsenceDto>();

@@ -21,8 +21,23 @@ namespace Pusula.Api.Controllers
         }
 
         [HttpGet("student/{studentId}")]
+        [Authorize(Roles = "Student,Teacher,Admin")]
         public async Task<ActionResult<IEnumerable<TeacherCommentWithDetailsDto>>> GetCommentsForStudent(Guid studentId)
         {
+            // If user is a student, ensure they can only access their own comments
+            if (User.IsInRole("Student"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null) return Unauthorized();
+
+                var student = await _context.Students
+                    .FirstOrDefaultAsync(s => s.UserId == Guid.Parse(userId));
+                if (student == null || student.Id != studentId)
+                {
+                    return Forbid("You can only access your own comments.");
+                }
+            }
+
             var comments = await _context.TeacherComments
                 .Include(tc => tc.Teacher)
                 .ThenInclude(t => t.User)

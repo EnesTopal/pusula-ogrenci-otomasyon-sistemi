@@ -90,24 +90,47 @@
 	</div>
 }
 
-<EditForm Model="query" OnValidSubmit="Load" FormName="gradesForm">
-	<div class="mb-2">
-		<label>Student</label>
-		<InputSelect @bind-Value="query.StudentId" class="form-control">
-			<option value="">Select a student...</option>
-			@if (students != null)
-			{
-				@foreach (var student in students)
+@if (isStudent)
+{
+	@if (currentStudent != null)
+	{
+		<div class="alert alert-info">
+			<h5>My Grades</h5>
+			<p class="mb-0">Showing grades for: <strong>@currentStudent.FullName</strong></p>
+		</div>
+	}
+}
+else
+{
+	<EditForm Model="query" OnValidSubmit="Load" FormName="gradesForm">
+		<div class="mb-2">
+			<label>Student</label>
+			<InputSelect @bind-Value="query.StudentId" class="form-control">
+				<option value="">Select a student...</option>
+				@if (students != null)
 				{
-					<option value="@student.Id">@student.FullName</option>
+					@foreach (var student in students)
+					{
+						<option value="@student.Id">@student.FullName</option>
+					}
 				}
-			}
-		</InputSelect>
-	</div>
-	<button class="btn btn-secondary" type="submit">Load</button>
-</EditForm>
+			</InputSelect>
+		</div>
+		<button class="btn btn-secondary" type="submit">Load</button>
+	</EditForm>
+}
 
-@if (grades == null) { <p>Select a student and click Load.</p>; }
+@if (grades == null) 
+{ 
+	@if (isStudent)
+	{
+		<p>Loading your grades...</p>
+	}
+	else
+	{
+		<p>Select a student and click Load.</p>
+	}
+}
 else
 {
 	<table class="table">
@@ -149,15 +172,18 @@ else
 	List<StudentDto>? courseStudents;
 	Dictionary<string, string> courseNames = new();
 	bool isTeacher = false;
+	bool isStudent = false;
 	bool isAddingGrade = false;
 	bool showAddGradeForm = false;
 	string selectedCourseId = string.Empty;
+	StudentDto? currentStudent = null;
 	
 	protected override async Task OnInitializedAsync()
 	{
-		// Check if user is teacher
+		// Check user roles
 		var authState = await AuthStateProvider.GetAuthenticationStateAsync();
 		isTeacher = authState.User.IsInRole("Teacher");
+		isStudent = authState.User.IsInRole("Student");
 		
 		// Load data
 		students = await Api.GetAsync<List<StudentDto>>("api/students");
@@ -168,6 +194,16 @@ else
 		if (isTeacher)
 		{
 			teacherCourses = await Api.GetAsync<List<CourseDto>>("api/teachers/my-courses");
+		}
+		
+		// Load current student info and their grades if user is student
+		if (isStudent)
+		{
+			currentStudent = await Api.GetAsync<StudentDto>("api/students/me");
+			if (currentStudent != null)
+			{
+				grades = await Api.GetAsync<List<GradeDto>>($"api/grades/by-student/{currentStudent.Id}");
+			}
 		}
 	}
 	

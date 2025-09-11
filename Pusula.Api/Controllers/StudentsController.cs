@@ -30,7 +30,6 @@ namespace Pusula.Api.Controllers
 		}
 
 		
-		/*
 		[HttpGet("me")]
 		[Authorize(Roles = "Student")]
 		public async Task<ActionResult<StudentDto>> GetMe()
@@ -41,7 +40,7 @@ namespace Pusula.Api.Controllers
 			var s = await _db.Students.Include(x => x.User).FirstOrDefaultAsync(x => x.UserId == guid);
 			if (s == null) return NotFound();
 			return new StudentDto(s.Id.ToString(), s.UserId.ToString(), s.User.Email ?? string.Empty, s.User.FullName ?? string.Empty, s.EnrollmentDate);
-		}*/
+		}
 
 		[HttpPost]
 		[Authorize(Roles = "Admin,Teacher")]

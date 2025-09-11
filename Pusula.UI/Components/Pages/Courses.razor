@@ -68,7 +68,7 @@ else
 		<tbody>
 			@foreach (var c in courses)
 			{
-				<tr><td>@c.Name</td><td>@c.TeacherName</td><td>@c.Status</td></tr>
+				<tr><td>@c.Name</td><td>@c.TeacherName</td><td>@GetStatusText(c.Status)</td></tr>
 			}
 		</tbody>
 	</table>
@@ -150,6 +150,17 @@ else
 			// Reset form when closing
 			newCourse = new CreateCourseRequest();
 		}
+	}
+	
+	string GetStatusText(int status)
+	{
+		return status switch
+		{
+			0 => "Not Started",
+			1 => "In Progress", 
+			2 => "Completed",
+			_ => "Unknown"
+		};
 	}
 }
 
