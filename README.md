@@ -1,15 +1,29 @@
 # Pusula – Öğrenci Otomasyon Sistemi
 
+Bu proje, temel kullanıcı ve ders yönetimi işlevlerini barındıran basit bir **öğrenci otomasyon sistemi**dir.  
+Amaç; kullanıcı rolleri (Admin, Öğretmen, Öğrenci) üzerinden ders, not ve devamsızlık süreçlerini yönetebilmektir.
+
 > **Deploy:** _link eklenecek_
 
 ## Tech Stack
-- **Backend:** .NET 9, EF Core, Identity, PostgreSQL
-- **Frontend:** Blazor Server
+- **Backend:** .NET 9 + Entity Framework Core  
+- **Frontend:** Blazor   
+- **Veritabanı:** PostgreSQL  
+- **Versiyon Kontrol:** GitHub
+- **Deploy** AWS 
 
 ## Özellikler (Uygulanan Gereksinimler)
-- **Kullanıcı Yönetimi:** Admin; öğretmen, öğrenci, ders,  oluşturabilir, güncelleyebilir. Derse öğretmen atayabilir.
-- **Öğrenciler:** Öğrenci kendi profilini görüntüleyebilir
-- **Öğretmenler:** Öğretmen, kendi dersi ile ilgili not girişi, yorum, devamsızlık gibi girişler sağlayabilir. 
+- **Kullanıcı Yönetimi**
+  - Admin; öğretmen, öğrenci ve ders oluşturabilir, güncelleyebilir.
+  - Admin; derslere öğretmen atayabilir.
+- **Öğrenciler**
+  - Öğrenci kendi profilini görüntüleyebilir.
+- **Öğretmenler**
+  - Öğretmen, kendi dersleri için:
+    - Not girişi
+    - Yorum ekleme
+    - Devamsızlık kaydı
+    - Öğrencileri derse ekleme/çıkarma işlemleri yapabilir.
 
 ## Kurulum
 Github Linki ile kullandığınız uygulama üzerinden kopyalayabilir veya termianlden
