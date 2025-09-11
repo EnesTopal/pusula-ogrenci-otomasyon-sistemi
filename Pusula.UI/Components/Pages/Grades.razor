@@ -2,8 +2,10 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject Pusula.UI.Services.ApiClient Api
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components
 
 <h3>Grades</h3>
 
@@ -22,7 +24,7 @@
 					<div class="row">
 						<div class="col-md-6 mb-3">
 							<label for="courseSelect" class="form-label">Course</label>
-							<InputSelect id="courseSelect" @bind-Value="newGrade.CourseId" @onchange="OnCourseChanged" class="form-control">
+							<InputSelect id="courseSelect" @bind-Value="selectedCourseId" @bind-Value:after="OnCourseChanged" class="form-control" TValue="string">
 								<option value="">Select a course...</option>
 								@if (teacherCourses != null)
 								{
@@ -36,17 +38,33 @@
 						</div>
 						<div class="col-md-6 mb-3">
 							<label for="studentSelect" class="form-label">Student</label>
-							<InputSelect id="studentSelect" @bind-Value="newGrade.StudentId" class="form-control" disabled="@(string.IsNullOrEmpty(newGrade.CourseId))">
-								<option value="">Select a student...</option>
-								@if (courseStudents != null)
+							<InputSelect id="studentSelect" @bind-Value="newGrade.StudentId" class="form-control" disabled="@isLoadingCourseStudents">
+								<option value="">@(isLoadingCourseStudents ? "Loading students..." : "Select a student...")</option>
+								@if (courseStudents != null && courseStudents.Any())
 								{
 									@foreach (var student in courseStudents)
 									{
 										<option value="@student.Id">@student.FullName</option>
 									}
 								}
+								else if (!isLoadingCourseStudents && !string.IsNullOrEmpty(selectedCourseId))
+								{
+									<option value="" disabled>No students enrolled in this course</option>
+								}
 							</InputSelect>
 							<ValidationMessage For="@(() => newGrade.StudentId)" />
+							@if (isLoadingCourseStudents)
+							{
+								<small class="text-muted">Loading students...</small>
+							}
+							else if (courseStudents != null)
+							{
+								<small class="text-muted">Enrolled students: @courseStudents.Count</small>
+							}
+							else if (!string.IsNullOrEmpty(selectedCourseId))
+							{
+								<small class="text-muted">No students enrolled in this course</small>
+							}
 						</div>
 					</div>
 					<div class="row">
@@ -104,6 +122,7 @@ else
 }
 
 @code {
+	bool isLoadingCourseStudents = false;
 	class GradeDto { public string Id { get; set; }=string.Empty; public string StudentId { get; set; }=string.Empty; public string CourseId { get; set; }=string.Empty; public decimal Value { get; set; } public DateTime GivenAt { get; set; } }
 	class StudentDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime EnrollmentDate { get; set; } }
 	class CourseDto { public string Id { get; set; }=string.Empty; public string Name { get; set; }=string.Empty; public string? Description { get; set; } public int Status { get; set; } public string TeacherId { get; set; }=string.Empty; public string TeacherName { get; set; }=string.Empty; }
@@ -132,6 +151,7 @@ else
 	bool isTeacher = false;
 	bool isAddingGrade = false;
 	bool showAddGradeForm = false;
+	string selectedCourseId = string.Empty;
 	
 	protected override async Task OnInitializedAsync()
 	{
@@ -159,15 +179,50 @@ else
 	
 	async Task OnCourseChanged()
 	{
-		if (!string.IsNullOrEmpty(newGrade.CourseId))
+		newGrade.CourseId = selectedCourseId;
+		
+		if (!string.IsNullOrEmpty(selectedCourseId))
 		{
-			courseStudents = await Api.GetAsync<List<StudentDto>>($"api/teachers/my-courses/{newGrade.CourseId}/students");
+			isLoadingCourseStudents = true;
+			courseStudents = null; // Clear previous results
+			newGrade.StudentId = string.Empty; // Reset student selection
+			
+			try
+			{
+				Console.WriteLine($"Loading students for course ID: {selectedCourseId}");
+				
+				// Validate GUID format
+				if (!Guid.TryParse(selectedCourseId, out var courseGuid))
+				{
+					Console.WriteLine($"Invalid GUID format: {selectedCourseId}");
+					courseStudents = new List<StudentDto>();
+					return;
+				}
+				
+				courseStudents = await Api.GetAsync<List<StudentDto>>($"api/teachers/my-courses/{selectedCourseId}/students");
+				Console.WriteLine($"API returned {courseStudents?.Count ?? 0} students");
+				
+				// Only show course students, no fallback to all students
+				if (courseStudents == null)
+				{
+					courseStudents = new List<StudentDto>();
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error loading course students: {ex.Message}");
+				courseStudents = new List<StudentDto>(); // Show empty list if there's an error
+			}
+			finally
+			{
+				isLoadingCourseStudents = false;
+			}
 		}
 		else
 		{
 			courseStudents = null;
+			newGrade.StudentId = string.Empty; // Reset student selection
 		}
-		newGrade.StudentId = string.Empty; // Reset student selection
 	}
 	
 	async Task AddGrade()
@@ -177,16 +232,29 @@ else
 		isAddingGrade = true;
 		try
 		{
-			await Api.PostAsync("api/grades", newGrade);
-			// Reset form and close
-			newGrade = new AddGradeRequest();
-			showAddGradeForm = false;
-			courseStudents = null;
+			Console.WriteLine($"Adding grade: CourseId={newGrade.CourseId}, StudentId={newGrade.StudentId}, Value={newGrade.Value}");
+			
+			var response = await Api.PostAsync("api/grades", newGrade);
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Reset form and close
+				newGrade = new AddGradeRequest();
+				selectedCourseId = string.Empty;
+				showAddGradeForm = false;
+				courseStudents = null;
+				await JS.InvokeVoidAsync("alert", "Grade added successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error adding grade: {response.StatusCode} - {errorContent}");
+			}
 		}
 		catch (Exception ex)
 		{
-			// Handle error - you might want to show a toast or error message
 			Console.WriteLine($"Error adding grade: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error adding grade: {ex.Message}");
 		}
 		finally
 		{
@@ -197,6 +265,7 @@ else
 	void CancelAddGrade()
 	{
 		newGrade = new AddGradeRequest();
+		selectedCourseId = string.Empty;
 		showAddGradeForm = false;
 		courseStudents = null;
 	}
@@ -208,6 +277,7 @@ else
 		{
 			// Reset form when closing
 			newGrade = new AddGradeRequest();
+			selectedCourseId = string.Empty;
 			courseStudents = null;
 		}
 	}

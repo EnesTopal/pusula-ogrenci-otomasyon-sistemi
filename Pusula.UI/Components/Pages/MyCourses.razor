@@ -2,6 +2,7 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject Pusula.UI.Services.ApiClient Api
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
 
@@ -249,19 +250,31 @@ else
 		isAddingStudent = true;
 		try
 		{
-		await Api.PostAsync($"api/courses/{addStudentRequest.CourseId}/enrollments", new { StudentId = addStudentRequest.StudentId });
-		
-		// Refresh the course students for the selected course before resetting form
-		await LoadCourseStudents(addStudentRequest.CourseId);
-		
-		// Reset form
-		addStudentRequest = new AddStudentRequest();
-		showAddStudentForm = false;
-		availableStudents = null;
+			Console.WriteLine($"Adding student to course: CourseId={addStudentRequest.CourseId}, StudentId={addStudentRequest.StudentId}");
+			
+			var response = await Api.PostAsync($"api/courses/{addStudentRequest.CourseId}/enrollments", new { StudentId = addStudentRequest.StudentId });
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Refresh the course students for the selected course before resetting form
+				await LoadCourseStudents(addStudentRequest.CourseId);
+				
+				// Reset form
+				addStudentRequest = new AddStudentRequest();
+				showAddStudentForm = false;
+				availableStudents = null;
+				await JS.InvokeVoidAsync("alert", "Student added to course successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error adding student to course: {response.StatusCode} - {errorContent}");
+			}
 		}
 		catch (Exception ex)
 		{
 			Console.WriteLine($"Error adding student to course: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error adding student to course: {ex.Message}");
 		}
 		finally
 		{
@@ -273,14 +286,26 @@ else
 	{
 		try
 		{
-			await Api.DeleteAsync($"api/courses/{courseId}/enrollments/{studentId}");
+			Console.WriteLine($"Removing student from course: CourseId={courseId}, StudentId={studentId}");
 			
-			// Refresh the course students
-			await LoadCourseStudents(courseId);
+			var response = await Api.DeleteAsync($"api/courses/{courseId}/enrollments/{studentId}");
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Refresh the course students
+				await LoadCourseStudents(courseId);
+				await JS.InvokeVoidAsync("alert", "Student removed from course successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error removing student from course: {response.StatusCode} - {errorContent}");
+			}
 		}
 		catch (Exception ex)
 		{
 			Console.WriteLine($"Error removing student from course: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error removing student from course: {ex.Message}");
 		}
 	}
 	
