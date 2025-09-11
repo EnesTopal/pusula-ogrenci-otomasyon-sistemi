@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 
 namespace Pusula.UI.Services
 {
@@ -61,6 +63,15 @@ namespace Pusula.UI.Services
 		{
 			AttachAuth();
 			return await _httpClient.PutAsJsonAsync(url, body);
+		}
+
+		public async Task<HttpResponseMessage> PatchAsync<T>(string url, T body)
+		{
+			AttachAuth();
+			var json = JsonSerializer.Serialize(body);
+			var content = new StringContent(json, Encoding.UTF8, "application/json");
+			var request = new HttpRequestMessage(HttpMethod.Patch, url) { Content = content };
+			return await _httpClient.SendAsync(request);
 		}
 
 		public async Task<HttpResponseMessage> DeleteAsync(string url)

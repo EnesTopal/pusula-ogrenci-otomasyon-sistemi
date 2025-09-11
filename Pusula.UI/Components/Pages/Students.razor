@@ -1,6 +1,9 @@
 @page "/students"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Teacher")]
 @inject Pusula.UI.Services.ApiClient Api
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Authorization
 
 <h3>Students</h3>
 
@@ -11,11 +14,45 @@
 else
 {
 	<table class="table">
-		<thead><tr><th>Name</th><th>Email</th><th>Enrolled</th></tr></thead>
+		<thead><tr><th>Name</th><th>Email</th><th>Enrolled</th><th>Actions</th></tr></thead>
 		<tbody>
 			@foreach (var s in students)
 			{
-				<tr><td>@s.FullName</td><td>@s.Email</td><td>@s.EnrollmentDate.ToShortDateString()</td></tr>
+				<tr>
+					<td>
+						@if (editingStudentId == s.Id)
+						{
+							<InputText @bind-Value="editingStudentName" class="form-control form-control-sm" />
+						}
+						else
+						{
+							@s.FullName
+						}
+					</td>
+					<td>@s.Email</td>
+					<td>@s.EnrollmentDate.ToShortDateString()</td>
+					<td>
+						@if (editingStudentId == s.Id)
+						{
+							<button class="btn btn-success btn-sm me-1" @onclick="() => SaveStudent(s.Id)" disabled="@isUpdatingStudent">
+								@if (isUpdatingStudent)
+								{
+									<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+								}
+								<i class="fas fa-check"></i>
+							</button>
+							<button class="btn btn-secondary btn-sm" @onclick="CancelEdit">
+								<i class="fas fa-times"></i>
+							</button>
+						}
+						else
+						{
+							<button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(s.Id, s.FullName)">
+								<i class="fas fa-edit"></i>
+							</button>
+						}
+					</td>
+				</tr>
 			}
 		</tbody>
 	</table>
@@ -23,11 +60,73 @@ else
 
 @code {
 	class StudentDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime EnrollmentDate { get; set; } }
+	class UpdateStudentRequest { public string FullName { get; set; } = string.Empty; }
+	
 	List<StudentDto>? students;
+	string editingStudentId = string.Empty;
+	string editingStudentName = string.Empty;
+	bool isUpdatingStudent = false;
+	bool canEditStudents = false;
 
 	protected override async Task OnInitializedAsync()
 	{
+		// Check if user can edit students (Admin or Teacher)
+		var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+		canEditStudents = authState.User.IsInRole("Admin") || authState.User.IsInRole("Teacher");
+		
 		students = await Api.GetAsync<List<StudentDto>>("api/students");
+	}
+	
+	void StartEdit(string studentId, string currentName)
+	{
+		editingStudentId = studentId;
+		editingStudentName = currentName;
+	}
+	
+	void CancelEdit()
+	{
+		editingStudentId = string.Empty;
+		editingStudentName = string.Empty;
+	}
+	
+	async Task SaveStudent(string studentId)
+	{
+		if (isUpdatingStudent || string.IsNullOrWhiteSpace(editingStudentName)) return;
+		
+		isUpdatingStudent = true;
+		try
+		{
+			Console.WriteLine($"Updating student: Id={studentId}, NewName={editingStudentName}");
+			
+			var response = await Api.PutAsync($"api/students/{studentId}", new UpdateStudentRequest { FullName = editingStudentName.Trim() });
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Update the local list
+				var student = students?.FirstOrDefault(s => s.Id == studentId);
+				if (student != null)
+				{
+					student.FullName = editingStudentName.Trim();
+				}
+				
+				CancelEdit();
+				await JS.InvokeVoidAsync("alert", "Student updated successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error updating student: {response.StatusCode} - {errorContent}");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error updating student: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error updating student: {ex.Message}");
+		}
+		finally
+		{
+			isUpdatingStudent = false;
+		}
 	}
 }
 

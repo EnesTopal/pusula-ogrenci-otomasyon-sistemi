@@ -27,8 +27,8 @@
 
 	async Task HandleLogin()
 	{
-		model.Email = model.Email?.Trim();
-    	model.Password = model.Password?.Trim();
+		model.Email = model.Email?.Trim() ?? string.Empty;
+    	model.Password = model.Password?.Trim() ?? string.Empty;
     	Console.WriteLine($"UI LOGIN: '{model.Email}', password{model.Password}");
 
 		var res = await Api.PostAsync("api/auth/login", model);

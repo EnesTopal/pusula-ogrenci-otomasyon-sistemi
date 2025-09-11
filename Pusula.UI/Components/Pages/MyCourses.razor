@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components
 
 <h3>My Courses</h3>
 
@@ -102,7 +103,14 @@ else
 				<div class="card">
 					<div class="card-header d-flex justify-content-between align-items-center">
 						<h5 class="mb-0">@course.Name</h5>
-						<span class="badge bg-@(GetStatusColor(course.Status))">@course.Status</span>
+						<div class="d-flex align-items-center gap-2">
+							<select class="form-select form-select-sm" style="width: auto;" @onchange="(e) => ChangeCourseStatus(course.Id, e)" value="@((int)course.Status)">
+								<option value="0">Not Started</option>
+								<option value="1">In Progress</option>
+								<option value="2">Completed</option>
+							</select>
+							<span class="badge bg-@(GetStatusColor(course.Status))">@GetStatusText(course.Status)</span>
+						</div>
 					</div>
 					<div class="card-body">
 						@if (!string.IsNullOrEmpty(course.Description))
@@ -147,6 +155,8 @@ else
 }
 
 @code {
+	enum CourseStatusDto { NotStarted = 0, InProgress = 1, Completed = 2 }
+	
 	class CourseDto { public string Id { get; set; }=string.Empty; public string Name { get; set; }=string.Empty; public string? Description { get; set; } public int Status { get; set; } public string TeacherId { get; set; }=string.Empty; public string TeacherName { get; set; }=string.Empty; }
 	class StudentDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime EnrollmentDate { get; set; } }
 	class AddStudentRequest 
@@ -342,6 +352,51 @@ else
 			2 => "success",   // Completed
 			_ => "secondary"
 		};
+	}
+	
+	string GetStatusText(int status)
+	{
+		return status switch
+		{
+			0 => "Not Started",
+			1 => "In Progress", 
+			2 => "Completed",
+			_ => "Unknown"
+		};
+	}
+	
+	async Task ChangeCourseStatus(string courseId, ChangeEventArgs e)
+	{
+		if (!int.TryParse(e.Value?.ToString(), out var newStatus)) return;
+		
+		try
+		{
+			Console.WriteLine($"Changing course status: CourseId={courseId}, NewStatus={newStatus}");
+			
+			var response = await Api.PatchAsync($"api/courses/{courseId}/status", new { Status = newStatus });
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Update the local course status
+				var course = teacherCourses?.FirstOrDefault(c => c.Id == courseId);
+				if (course != null)
+				{
+					course.Status = newStatus;
+				}
+				
+				await JS.InvokeVoidAsync("alert", "Course status updated successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error updating course status: {response.StatusCode} - {errorContent}");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error updating course status: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error updating course status: {ex.Message}");
+		}
 	}
 	
 	int GetStudentCount(string courseId)

@@ -1,6 +1,7 @@
 @page "/teachers"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 @inject Pusula.UI.Services.ApiClient Api
+@inject IJSRuntime JS
 
 <h3>Teachers</h3>
 
@@ -8,11 +9,45 @@
 else
 {
 	<table class="table">
-		<thead><tr><th>Name</th><th>Email</th><th>Hire Date</th></tr></thead>
+		<thead><tr><th>Name</th><th>Email</th><th>Hire Date</th><th>Actions</th></tr></thead>
 		<tbody>
 			@foreach (var t in teachers)
 			{
-				<tr><td>@t.FullName</td><td>@t.Email</td><td>@t.HireDate.ToShortDateString()</td></tr>
+				<tr>
+					<td>
+						@if (editingTeacherId == t.Id)
+						{
+							<InputText @bind-Value="editingTeacherName" class="form-control form-control-sm" />
+						}
+						else
+						{
+							@t.FullName
+						}
+					</td>
+					<td>@t.Email</td>
+					<td>@t.HireDate.ToShortDateString()</td>
+					<td>
+						@if (editingTeacherId == t.Id)
+						{
+							<button class="btn btn-success btn-sm me-1" @onclick="() => SaveTeacher(t.Id)" disabled="@isUpdatingTeacher">
+								@if (isUpdatingTeacher)
+								{
+									<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+								}
+								<i class="fas fa-check"></i>
+							</button>
+							<button class="btn btn-secondary btn-sm" @onclick="CancelEdit">
+								<i class="fas fa-times"></i>
+							</button>
+						}
+						else
+						{
+							<button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(t.Id, t.FullName)">
+								<i class="fas fa-edit"></i>
+							</button>
+						}
+					</td>
+				</tr>
 			}
 		</tbody>
 	</table>
@@ -20,10 +55,68 @@ else
 
 @code {
 	class TeacherDto { public string Id { get; set; }=string.Empty; public string UserId { get; set; }=string.Empty; public string Email { get; set; }=string.Empty; public string FullName { get; set; }=string.Empty; public DateTime HireDate { get; set; } }
+	class UpdateTeacherRequest { public string FullName { get; set; } = string.Empty; }
+	
 	List<TeacherDto>? teachers;
+	string editingTeacherId = string.Empty;
+	string editingTeacherName = string.Empty;
+	bool isUpdatingTeacher = false;
+
 	protected override async Task OnInitializedAsync()
 	{
 		teachers = await Api.GetAsync<List<TeacherDto>>("api/teachers");
+	}
+	
+	void StartEdit(string teacherId, string currentName)
+	{
+		editingTeacherId = teacherId;
+		editingTeacherName = currentName;
+	}
+	
+	void CancelEdit()
+	{
+		editingTeacherId = string.Empty;
+		editingTeacherName = string.Empty;
+	}
+	
+	async Task SaveTeacher(string teacherId)
+	{
+		if (isUpdatingTeacher || string.IsNullOrWhiteSpace(editingTeacherName)) return;
+		
+		isUpdatingTeacher = true;
+		try
+		{
+			Console.WriteLine($"Updating teacher: Id={teacherId}, NewName={editingTeacherName}");
+			
+			var response = await Api.PutAsync($"api/teachers/{teacherId}", new UpdateTeacherRequest { FullName = editingTeacherName.Trim() });
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Update the local list
+				var teacher = teachers?.FirstOrDefault(t => t.Id == teacherId);
+				if (teacher != null)
+				{
+					teacher.FullName = editingTeacherName.Trim();
+				}
+				
+				CancelEdit();
+				await JS.InvokeVoidAsync("alert", "Teacher updated successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error updating teacher: {response.StatusCode} - {errorContent}");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error updating teacher: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error updating teacher: {ex.Message}");
+		}
+		finally
+		{
+			isUpdatingTeacher = false;
+		}
 	}
 }
 
