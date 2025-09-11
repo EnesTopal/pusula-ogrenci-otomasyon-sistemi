@@ -28,6 +28,7 @@
                     <AuthorizeView Roles="Teacher">
                         <Authorized Context="userTeacher">
                             <div class="nav-item px-3"><NavLink class="nav-link" href="/my-courses">My Courses</NavLink></div>
+                            <div class="nav-item px-3"><NavLink class="nav-link" href="/student-comments">Student Comments</NavLink></div>
                         </Authorized>
                     </AuthorizeView>
                     <AuthorizeView Roles="Admin">
@@ -37,6 +38,11 @@
                     </AuthorizeView>
                     <div class="nav-item px-3"><NavLink class="nav-link" href="/grades">Grades</NavLink></div>
                     <div class="nav-item px-3"><NavLink class="nav-link" href="/absences">Absences</NavLink></div>
+                    <AuthorizeView Roles="Student">
+                        <Authorized Context="userStudent">
+                            <div class="nav-item px-3"><NavLink class="nav-link" href="/my-comments">My Comments</NavLink></div>
+                        </Authorized>
+                    </AuthorizeView>
                     <AuthorizeView Roles="Admin">
                         <Authorized Context="userAdmin2">
                             <div class="nav-item px-3"><NavLink class="nav-link" href="/register">Register</NavLink></div>

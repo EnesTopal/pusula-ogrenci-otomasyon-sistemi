@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Pusula.UI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8eb9499389c2335827e723ca788ec7f9e264256e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bf4e2976feaf543cfddc32f49c5688fc0cd0c786")]
 [assembly: System.Reflection.AssemblyProductAttribute("Pusula.UI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Pusula.UI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,0 +1,307 @@
+@page "/student-comments"
+@using Pusula.UI.Services
+@using Pusula.Api.DTOs
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Teacher")]
+@inject ApiClient ApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Student Comments</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1>Student Comments</h1>
+            <p class="text-muted">Add comments about your students' performance in your courses.</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            <h4>Error Loading Data</h4>
+            <p>@errorMessage</p>
+            <button class="btn btn-outline-danger" @onclick="RetryLoad">Retry</button>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Add New Comment</h5>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="commentForm" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="studentSelect" class="form-label">Student</label>
+                                    <InputSelect id="studentSelect" @bind-Value="commentForm.StudentId" @bind-Value:after="OnStudentChanged" class="form-select">
+                                        <option value="">Select a student...</option>
+                                        @if (students != null)
+                                        {
+                                            @foreach (var student in students.GroupBy(s => s.StudentId).Select(g => g.First()))
+                                            {
+                                                <option value="@student.StudentId">@student.StudentName</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="courseSelect" class="form-label">Course</label>
+                                    <InputSelect id="courseSelect" @bind-Value="selectedCourseId" class="form-select" disabled="@(string.IsNullOrEmpty(commentForm.StudentId))">
+                                        <option value="">Select a course...</option>
+                                        @if (selectedStudentCourses != null)
+                                        {
+                                            @foreach (var course in selectedStudentCourses)
+                                            {
+                                                <option value="@course.CourseId">@course.CourseName</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="commentText" class="form-label">Comment</label>
+                                <InputTextArea id="commentText" @bind-Value="commentForm.Comment" class="form-control" rows="4" placeholder="Enter your comment about the student's performance..." />
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    }
+                                    Add Comment
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (students != null && students.Any())
+        {
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>My Students</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Course</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var student in students.GroupBy(s => s.StudentId).Select(g => g.First()))
+                                {
+                                    <tr>
+                                        <td>@student.StudentName</td>
+                                        <td>
+                                            @string.Join(", ", students.Where(s => s.StudentId == student.StudentId).Select(s => s.CourseName))
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ToggleStudentComments(student.StudentId)">
+                                                @(expandedStudentId == student.StudentId ? "Hide Comments" : "View Comments")
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(expandedStudentId) && studentComments != null)
+        {
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Comments for @(students?.FirstOrDefault(s => s.StudentId == expandedStudentId)?.StudentName ?? "Student")</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (studentComments.Any())
+                            {
+                                <div class="row">
+                                    @foreach (var comment in studentComments)
+                                    {
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="card h-100">
+                                                <div class="card-header d-flex justify-content-between align-items-center">
+                                                    <h6 class="card-title mb-0">@comment.CourseName</h6>
+                                                    <small class="text-muted">@comment.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="card-text">@comment.Comment</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No comments available for this student.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<StudentWithCoursesDto>? students;
+    private List<StudentWithCoursesDto>? selectedStudentCourses;
+    private string selectedCourseId = "";
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage = null;
+    private string expandedStudentId = "";
+    private List<TeacherCommentWithDetailsDto>? studentComments;
+    
+    private CommentFormModel commentForm = new();
+    
+    public class CommentFormModel
+    {
+        public string StudentId { get; set; } = "";
+        public string Comment { get; set; } = "";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStudents();
+        isLoading = false;
+    }
+
+    private async Task LoadStudents()
+    {
+        try
+        {
+            errorMessage = null;
+            students = await ApiClient.GetAsync<List<StudentWithCoursesDto>>("api/teachercomments/my-students");
+            if (students == null)
+            {
+                errorMessage = "Failed to load students. Please try again.";
+            }
+            else
+            {
+                Console.WriteLine($"Loaded {students.Count} student-course combinations");
+                foreach (var student in students.Take(3)) // Show first 3 for debugging
+                {
+                    Console.WriteLine($"Student: {student.StudentName} - Course: {student.CourseName}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading students: {ex.Message}";
+            Console.WriteLine($"Error loading students: {ex.Message}");
+        }
+    }
+
+    private async Task RetryLoad()
+    {
+        isLoading = true;
+        errorMessage = null;
+        await LoadStudents();
+        isLoading = false;
+    }
+
+    private void OnStudentChanged()
+    {
+        selectedCourseId = "";
+        
+        if (!string.IsNullOrEmpty(commentForm.StudentId))
+        {
+            selectedStudentCourses = students?.Where(s => s.StudentId == commentForm.StudentId).ToList();
+            Console.WriteLine($"Selected student: {commentForm.StudentId}");
+            Console.WriteLine($"Found {selectedStudentCourses?.Count ?? 0} courses for this student");
+        }
+        else
+        {
+            selectedStudentCourses = null;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrEmpty(commentForm.StudentId) || string.IsNullOrEmpty(commentForm.Comment))
+        {
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var request = new CreateTeacherCommentRequest(commentForm.StudentId, commentForm.Comment);
+            var response = await ApiClient.PostAsync("api/teachercomments", request);
+            if (response.IsSuccessStatusCode)
+            {
+                commentForm = new CommentFormModel();
+                selectedCourseId = "";
+                selectedStudentCourses = null;
+                // You could add a success message here
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating comment: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task ToggleStudentComments(string studentId)
+    {
+        if (expandedStudentId == studentId)
+        {
+            // Hide comments
+            expandedStudentId = "";
+            studentComments = null;
+        }
+        else
+        {
+            // Show comments for this student
+            expandedStudentId = studentId;
+            await LoadStudentComments(studentId);
+        }
+    }
+
+    private async Task LoadStudentComments(string studentId)
+    {
+        try
+        {
+            studentComments = await ApiClient.GetAsync<List<TeacherCommentWithDetailsDto>>($"api/teachercomments/student/{studentId}");
+            Console.WriteLine($"Loaded {studentComments?.Count ?? 0} comments for student {studentId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading comments for student {studentId}: {ex.Message}");
+            studentComments = new List<TeacherCommentWithDetailsDto>();
+        }
+    }
+}

@@ -53,6 +53,27 @@ namespace Pusula.Api.Controllers
 			var list = await _db.Absences.Where(x => x.StudentId == studentId).ToListAsync();
 			return list.Select(a => new AbsenceDto(a.Id.ToString(), a.StudentId.ToString(), a.CourseId.ToString(), a.Date, a.Reason));
 		}
+
+		[HttpGet("student/{studentId}")]
+		[Authorize(Roles = "Teacher,Admin")]
+		public async Task<IEnumerable<AbsenceWithCourseDto>> GetAbsencesWithCourseForStudent(Guid studentId)
+		{
+			var absences = await _db.Absences
+				.Include(a => a.Course)
+				.Where(a => a.StudentId == studentId)
+				.OrderByDescending(a => a.Date)
+				.Select(a => new AbsenceWithCourseDto(
+					a.Id.ToString(),
+					a.StudentId.ToString(),
+					a.CourseId.ToString(),
+					a.Course.Name,
+					a.Date,
+					a.Reason
+				))
+				.ToListAsync();
+
+			return absences;
+		}
 	}
 }
 

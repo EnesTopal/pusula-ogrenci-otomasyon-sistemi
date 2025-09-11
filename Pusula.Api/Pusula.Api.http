@@ -4,3 +4,30 @@ GET {{Pusula.Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# Teacher Comments API Tests
+# Note: These require authentication tokens
+
+### Get comments for a student
+GET {{Pusula.Api_HostAddress}}/api/teachercomments/student/{studentId}
+Authorization: Bearer {token}
+
+### Get my students (Teacher only)
+GET {{Pusula.Api_HostAddress}}/api/teachercomments/my-students
+Authorization: Bearer {token}
+
+### Create a new comment (Teacher only)
+POST {{Pusula.Api_HostAddress}}/api/teachercomments
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "studentId": "student-guid-here",
+  "comment": "Great performance in the course!"
+}
+
+### Delete a comment (Teacher only)
+DELETE {{Pusula.Api_HostAddress}}/api/teachercomments/{commentId}
+Authorization: Bearer {token}
+
+###

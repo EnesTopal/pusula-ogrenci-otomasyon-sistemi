@@ -48,12 +48,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xMb2dpbi5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[c:/Users/enest/CursorProjects/pusula/Pusula.UI/Components/Pages/MyComments.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNeUNvbW1lbnRzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [c:/Users/enest/CursorProjects/pusula/Pusula.UI/Components/Pages/MyCourses.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xNeUNvdXJzZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [c:/Users/enest/CursorProjects/pusula/Pusula.UI/Components/Pages/Register.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xSZWdpc3Rlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[c:/Users/enest/CursorProjects/pusula/Pusula.UI/Components/Pages/StudentComments.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTdHVkZW50Q29tbWVudHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [c:/Users/enest/CursorProjects/pusula/Pusula.UI/Components/Pages/Students.razor]

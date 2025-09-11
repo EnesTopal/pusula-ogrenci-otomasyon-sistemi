@@ -17,13 +17,17 @@ namespace Pusula.Api.DTOs
 	public record EnrollmentRequest(string StudentId);
 
 	public record GradeDto(string Id, string StudentId, string CourseId, decimal Value, DateTime GivenAt);
+	public record GradeWithCourseDto(string Id, string StudentId, string CourseId, string CourseName, decimal Value, DateTime GivenAt);
 	public record CreateGradeRequest(string StudentId, string CourseId, decimal Value);
 
 	public record AbsenceDto(string Id, string StudentId, string CourseId, DateTime Date, string? Reason);
+	public record AbsenceWithCourseDto(string Id, string StudentId, string CourseId, string CourseName, DateTime Date, string? Reason);
 	public record CreateAbsenceRequest(string StudentId, string CourseId, DateTime Date, string? Reason);
 
 	public record TeacherCommentDto(string Id, string TeacherId, string StudentId, string CourseId, string Comment, DateTime CreatedAt);
+	public record TeacherCommentWithDetailsDto(string Id, string TeacherId, string StudentId, string CourseId, string Comment, DateTime CreatedAt, string TeacherName, string CourseName);
 	public record CreateTeacherCommentRequest(string StudentId, string Comment);
+	public record StudentWithCoursesDto(string StudentId, string StudentName, string CourseId, string CourseName);
 }
 
 

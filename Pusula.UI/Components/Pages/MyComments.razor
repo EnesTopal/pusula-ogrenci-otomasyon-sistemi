@@ -1,0 +1,93 @@
+@page "/my-comments"
+@using Pusula.UI.Services
+@using Pusula.Api.DTOs
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Student")]
+@inject ApiClient ApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>My Comments</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1>My Comments</h1>
+            <p class="text-muted">Comments from your teachers about your performance in courses.</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (comments == null || !comments.Any())
+    {
+        <div class="alert alert-info">
+            <h4>No Comments Yet</h4>
+            <p>You don't have any comments from your teachers yet. Comments will appear here once your teachers add them.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var comment in comments)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="card-title mb-0">@comment.CourseName</h6>
+                            <small class="text-muted">@comment.CreatedAt.ToString("MMM dd, yyyy")</small>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">@comment.Comment</p>
+                            <div class="mt-auto">
+                                <small class="text-muted">
+                                    <i class="bi bi-person"></i> @comment.TeacherName
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<TeacherCommentWithDetailsDto>? comments;
+    private bool isLoading = true;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUserId = user.FindFirst("sub")?.Value;
+            await LoadComments();
+        }
+        
+        isLoading = false;
+    }
+
+    private async Task LoadComments()
+    {
+        if (currentUserId == null) return;
+
+        try
+        {
+            comments = await ApiClient.GetAsync<List<TeacherCommentWithDetailsDto>>($"api/teachercomments/student/{currentUserId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading comments: {ex.Message}");
+        }
+    }
+}

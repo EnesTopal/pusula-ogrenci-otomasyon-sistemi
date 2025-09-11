@@ -56,6 +56,27 @@ namespace Pusula.Api.Controllers
 			var list = await _db.Grades.Where(g => g.StudentId == studentId).ToListAsync();
 			return list.Select(g => new GradeDto(g.Id.ToString(), g.StudentId.ToString(), g.CourseId.ToString(), g.Value, g.GivenAt));
 		}
+
+		[HttpGet("student/{studentId}")]
+		[Authorize(Roles = "Teacher,Admin")]
+		public async Task<IEnumerable<GradeWithCourseDto>> GetGradesWithCourseForStudent(Guid studentId)
+		{
+			var grades = await _db.Grades
+				.Include(g => g.Course)
+				.Where(g => g.StudentId == studentId)
+				.OrderByDescending(g => g.GivenAt)
+				.Select(g => new GradeWithCourseDto(
+					g.Id.ToString(),
+					g.StudentId.ToString(),
+					g.CourseId.ToString(),
+					g.Course.Name,
+					g.Value,
+					g.GivenAt
+				))
+				.ToListAsync();
+
+			return grades;
+		}
 	}
 }
 
