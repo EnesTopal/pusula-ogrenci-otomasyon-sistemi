@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+README.md
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# IDE
+.vs/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+bin/
+obj/
+out/
+
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env*
+env.*
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node modules (if any)
+node_modules/
+
+# Test files
+*Tests/
+*Test/
+test/
+tests/

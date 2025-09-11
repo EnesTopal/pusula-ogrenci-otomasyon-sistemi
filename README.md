@@ -3,7 +3,7 @@
 Bu proje, temel kullanıcı ve ders yönetimi işlevlerini barındıran basit bir **öğrenci otomasyon sistemi**dir.  
 Amaç; kullanıcı rolleri (Admin, Öğretmen, Öğrenci) üzerinden ders, not ve devamsızlık süreçlerini yönetebilmektir.
 
-> **Deploy:** _link eklenecek_
+> **Deploy:**  <a href="http://51.20.188.237:8081/" target="_blank">http://51.20.188.237:8081/</a>
 
 ## Tech Stack
 - **Backend:** .NET 9 + Entity Framework Core  
