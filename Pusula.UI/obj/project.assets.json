@@ -1422,7 +1422,8 @@
           "targetAlias": "net9.0",
           "projectReferences": {
             "C:\\Users\\enest\\CursorProjects\\pusula\\Pusula.Api\\Pusula.Api.csproj": {
-              "projectPath": "C:\\Users\\enest\\CursorProjects\\pusula\\Pusula.Api\\Pusula.Api.csproj"
+              "projectPath": "C:\\Users\\enest\\CursorProjects\\pusula\\Pusula.Api\\Pusula.Api.csproj",
+              "excludeAssets": "contentfiles"
             }
           }
         }

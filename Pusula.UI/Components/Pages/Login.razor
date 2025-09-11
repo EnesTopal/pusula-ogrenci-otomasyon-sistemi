@@ -7,6 +7,13 @@
 
 <h3>Login</h3>
 
+@if (!string.IsNullOrEmpty(errorMsg))
+{
+	<div class="alert alert-danger" role="alert">
+		@errorMsg
+	</div>
+}
+
 <EditForm Model="model" OnValidSubmit="HandleLogin" FormName="loginForm">
 	<DataAnnotationsValidator />
 	<ValidationSummary />
@@ -24,9 +31,11 @@
 @code {
 	class LoginModel { public string Email { get; set; } = string.Empty; public string Password { get; set; } = string.Empty; }
 	LoginModel model = new();
+	string? errorMsg;
 
 	async Task HandleLogin()
 	{
+		errorMsg = null;
 		model.Email = model.Email?.Trim() ?? string.Empty;
     	model.Password = model.Password?.Trim() ?? string.Empty;
     	Console.WriteLine($"UI LOGIN: '{model.Email}', password{model.Password}");
@@ -40,6 +49,12 @@
 			var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 			var returnUrl = query.Get("returnUrl");
 			Nav.NavigateTo(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl);
+		}
+		else
+		{
+			var errorContent = await res.Content.ReadAsStringAsync();
+			errorMsg = $"Login failed: {res.StatusCode} - {errorContent}";
+			StateHasChanged();
 		}
 	}
 

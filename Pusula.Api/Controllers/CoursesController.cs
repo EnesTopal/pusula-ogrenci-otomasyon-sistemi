@@ -145,6 +145,46 @@ namespace Pusula.Api.Controllers
 			await _db.SaveChangesAsync();
 			return Ok(new TeacherCommentDto(comment.Id.ToString(), comment.TeacherId.ToString(), comment.StudentId.ToString(), comment.CourseId.ToString(), comment.Comment, comment.CreatedAt));
 		}
+
+		[HttpDelete("{id}")]
+		[Authorize(Roles = "Admin,Teacher")]
+		public async Task<IActionResult> Delete(Guid id)
+		{
+			var course = await _db.Courses.FirstOrDefaultAsync(c => c.Id == id);
+			if (course == null) return NotFound();
+
+			// If user is Teacher, verify they own this course
+			if (User.IsInRole("Teacher"))
+			{
+				var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+				if (string.IsNullOrEmpty(userId)) return Unauthorized();
+				
+				var teacher = await _db.Teachers.FirstOrDefaultAsync(t => t.UserId.ToString() == userId);
+				if (teacher == null || course.TeacherId != teacher.Id) return Forbid();
+			}
+
+			// Delete grades for this course
+			var grades = await _db.Grades.Where(g => g.CourseId == id).ToListAsync();
+			_db.Grades.RemoveRange(grades);
+
+			// Delete absences for this course
+			var absences = await _db.Absences.Where(a => a.CourseId == id).ToListAsync();
+			_db.Absences.RemoveRange(absences);
+
+			// Delete teacher comments for this course
+			var comments = await _db.TeacherComments.Where(tc => tc.CourseId == id).ToListAsync();
+			_db.TeacherComments.RemoveRange(comments);
+
+			// Delete enrollments for this course
+			var enrollments = await _db.Enrollments.Where(e => e.CourseId == id).ToListAsync();
+			_db.Enrollments.RemoveRange(enrollments);
+
+			// Finally delete the course
+			_db.Courses.Remove(course);
+
+			await _db.SaveChangesAsync();
+			return NoContent();
+		}
 	}
 }
 

@@ -8,6 +8,13 @@
 
 <h3>Register</h3>
 
+@if (!string.IsNullOrEmpty(errorMsg))
+{
+	<div class="alert alert-danger" role="alert">
+		@errorMsg
+	</div>
+}
+
 <EditForm Model="model" OnValidSubmit="HandleRegister" FormName="registerForm">
 	<DataAnnotationsValidator />
 	<ValidationSummary />
@@ -56,8 +63,7 @@
         {
             var body = await res.Content.ReadAsStringAsync();
             Console.WriteLine($"Register failed: {(int)res.StatusCode} {res.StatusCode} - {body}");
-            errorMsg = $"Hata: {body}";
-			await JS.InvokeVoidAsync("alert", errorMsg);
+            errorMsg = $"Registration failed: {res.StatusCode} - {body}";
             StateHasChanged();
         }
 	}

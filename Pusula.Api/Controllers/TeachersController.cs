@@ -64,16 +64,44 @@ namespace Pusula.Api.Controllers
 			return NoContent();
 		}
 
-		[HttpDelete("{id}")]
-		[Authorize(Roles = "Admin")]
-		public async Task<IActionResult> Delete(Guid id)
-		{
-			var t = await _db.Teachers.FirstOrDefaultAsync(x => x.Id == id);
-			if (t == null) return NotFound();
-			_db.Teachers.Remove(t);
-			await _db.SaveChangesAsync();
-			return NoContent();
-		}
+	[HttpDelete("{id}")]
+	[Authorize(Roles = "Admin")]
+	public async Task<IActionResult> Delete(Guid id)
+	{
+		var teacher = await _db.Teachers
+			.Include(t => t.Courses)
+			.FirstOrDefaultAsync(x => x.Id == id);
+		
+		if (teacher == null) return NotFound();
+
+		// Get all courses for this teacher
+		var courseIds = teacher.Courses.Select(c => c.Id).ToList();
+
+		// Delete grades for all courses of this teacher
+		var grades = await _db.Grades.Where(g => courseIds.Contains(g.CourseId)).ToListAsync();
+		_db.Grades.RemoveRange(grades);
+
+		// Delete absences for all courses of this teacher
+		var absences = await _db.Absences.Where(a => courseIds.Contains(a.CourseId)).ToListAsync();
+		_db.Absences.RemoveRange(absences);
+
+		// Delete teacher comments for all courses of this teacher
+		var comments = await _db.TeacherComments.Where(tc => courseIds.Contains(tc.CourseId)).ToListAsync();
+		_db.TeacherComments.RemoveRange(comments);
+
+		// Delete enrollments for all courses of this teacher
+		var enrollments = await _db.Enrollments.Where(e => courseIds.Contains(e.CourseId)).ToListAsync();
+		_db.Enrollments.RemoveRange(enrollments);
+
+		// Delete courses of this teacher
+		_db.Courses.RemoveRange(teacher.Courses);
+
+		// Finally delete the teacher
+		_db.Teachers.Remove(teacher);
+
+		await _db.SaveChangesAsync();
+		return NoContent();
+	}
 
 	[HttpGet("my-courses")]
 	[Authorize(Roles = "Teacher")]

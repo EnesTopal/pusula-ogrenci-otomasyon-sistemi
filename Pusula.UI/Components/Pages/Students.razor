@@ -47,9 +47,19 @@ else
 						}
 						else
 						{
-							<button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(s.Id, s.FullName)">
+							<button class="btn btn-outline-primary btn-sm me-1" @onclick="() => StartEdit(s.Id, s.FullName)">
 								<i class="fas fa-edit"></i>
 							</button>
+							@if (canEditStudents)
+							{
+								<button class="btn btn-danger btn-sm" @onclick="() => DeleteStudent(s.Id)" disabled="@isDeletingStudent">
+									@if (isDeletingStudent)
+									{
+										<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+									}
+									<i class="fas fa-trash"></i>
+								</button>
+							}
 						}
 					</td>
 				</tr>
@@ -66,6 +76,7 @@ else
 	string editingStudentId = string.Empty;
 	string editingStudentName = string.Empty;
 	bool isUpdatingStudent = false;
+	bool isDeletingStudent = false;
 	bool canEditStudents = false;
 
 	protected override async Task OnInitializedAsync()
@@ -126,6 +137,44 @@ else
 		finally
 		{
 			isUpdatingStudent = false;
+		}
+	}
+	
+	async Task DeleteStudent(string studentId)
+	{
+		if (isDeletingStudent) return;
+		
+		var confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this student? This action cannot be undone.");
+		if (!confirmed) return;
+		
+		isDeletingStudent = true;
+		try
+		{
+			Console.WriteLine($"Deleting student: Id={studentId}");
+			
+			var response = await Api.DeleteAsync($"api/students/{studentId}");
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Remove from local list
+				students = students?.Where(s => s.Id != studentId).ToList();
+				StateHasChanged();
+				await JS.InvokeVoidAsync("alert", "Student deleted successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error deleting student: {response.StatusCode} - {errorContent}");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error deleting student: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error deleting student: {ex.Message}");
+		}
+		finally
+		{
+			isDeletingStudent = false;
 		}
 	}
 }

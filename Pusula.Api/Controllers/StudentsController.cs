@@ -76,9 +76,9 @@ namespace Pusula.Api.Controllers
 			return NoContent();
 		}
 
-		[HttpDelete("{id}")]
-		[Authorize(Roles = "Admin")]
-		public async Task<IActionResult> Delete(Guid id)
+	[HttpDelete("{id}")]
+	[Authorize(Roles = "Admin,Teacher")]
+	public async Task<IActionResult> Delete(Guid id)
 		{
 			var s = await _db.Students.FirstOrDefaultAsync(x => x.Id == id);
 			if (s == null) return NotFound();

@@ -42,8 +42,15 @@ else
 						}
 						else
 						{
-							<button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(t.Id, t.FullName)">
+							<button class="btn btn-outline-primary btn-sm me-1" @onclick="() => StartEdit(t.Id, t.FullName)">
 								<i class="fas fa-edit"></i>
+							</button>
+							<button class="btn btn-danger btn-sm" @onclick="() => DeleteTeacher(t.Id)" disabled="@isDeletingTeacher">
+								@if (isDeletingTeacher)
+								{
+									<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+								}
+								<i class="fas fa-trash"></i>
 							</button>
 						}
 					</td>
@@ -61,6 +68,7 @@ else
 	string editingTeacherId = string.Empty;
 	string editingTeacherName = string.Empty;
 	bool isUpdatingTeacher = false;
+	bool isDeletingTeacher = false;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -116,6 +124,44 @@ else
 		finally
 		{
 			isUpdatingTeacher = false;
+		}
+	}
+	
+	async Task DeleteTeacher(string teacherId)
+	{
+		if (isDeletingTeacher) return;
+		
+		var confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this teacher? This action cannot be undone.");
+		if (!confirmed) return;
+		
+		isDeletingTeacher = true;
+		try
+		{
+			Console.WriteLine($"Deleting teacher: Id={teacherId}");
+			
+			var response = await Api.DeleteAsync($"api/teachers/{teacherId}");
+			
+			if (response.IsSuccessStatusCode)
+			{
+				// Remove from local list
+				teachers = teachers?.Where(t => t.Id != teacherId).ToList();
+				StateHasChanged();
+				await JS.InvokeVoidAsync("alert", "Teacher deleted successfully!");
+			}
+			else
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				await JS.InvokeVoidAsync("alert", $"Error deleting teacher: {response.StatusCode} - {errorContent}");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error deleting teacher: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error deleting teacher: {ex.Message}");
+		}
+		finally
+		{
+			isDeletingTeacher = false;
 		}
 	}
 }
