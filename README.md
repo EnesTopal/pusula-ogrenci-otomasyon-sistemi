@@ -10,7 +10,7 @@ Amaç; kullanıcı rolleri (Admin, Öğretmen, Öğrenci) üzerinden ders, not v
 - **Frontend:** Blazor   
 - **Veritabanı:** PostgreSQL  
 - **Versiyon Kontrol:** GitHub
-- **Deploy** AWS 
+- **Deploy** AWS - Docker - Docker Compose
 
 ## Özellikler (Uygulanan Gereksinimler)
 - **Kullanıcı Yönetimi**
@@ -49,16 +49,16 @@ Github Linki ile kullandığınız uygulama üzerinden kopyalayabilir veya termi
 Aşağıda 3 farklı rol türünde de kullanıcıların hesap bilgileri verilmiştir.
 
 - **Admin**
-  - Email: ...
-  - Password: ...
+  - Email: testadmin@gmail.com
+  - Password: testAdmin34
 
 - **Teacher**
-  - Email: ...
-  - Password: ...
+  - Email: testogretmen@gmail.com
+  - Password: testOgretmen34
 
 - **Student**
-  - Email: ...
-  - Password: ...
+  - Email: testogrenci2@gmail.com
+  - Password: testOgrenci34
 
 
 ## Yapılmış olan bonus görevler
