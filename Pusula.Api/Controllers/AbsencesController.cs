@@ -30,7 +30,7 @@ namespace Pusula.Api.Controllers
 		if (teacher == null || course.TeacherId != teacher.Id)
 			return Forbid();
 
-			var a = new Pusula.Api.Domain.Absence { Id = Guid.NewGuid(), StudentId = Guid.Parse(request.StudentId), CourseId = Guid.Parse(request.CourseId), Date = request.Date, Reason = request.Reason };
+			var a = new Pusula.Api.Domain.Absence { Id = Guid.NewGuid(), StudentId = Guid.Parse(request.StudentId), CourseId = Guid.Parse(request.CourseId), Date = request.Date.Kind == DateTimeKind.Utc ? request.Date : request.Date.ToUniversalTime(), Reason = request.Reason };
 			_db.Absences.Add(a);
 			await _db.SaveChangesAsync();
 			return Ok(new AbsenceDto(a.Id.ToString(), a.StudentId.ToString(), a.CourseId.ToString(), a.Date, a.Reason));
