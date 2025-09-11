@@ -62,3 +62,10 @@ Aşağıda 3 farklı rol türünde de kullanıcıların hesap bilgileri verilmi�
 
 
 ## Yapılmış olan bonus görevler
+
+- Kullanıcı arama ve filtreleme özelliği eklemek: Öğretmen/Admin not-devamsızlık-not sayfalarında öğrenci seçerek ona ait bilgileri görebilir.
+- UI/UX düzenlemeleri: Responsive sayfa tasarımı yapıldı.
+- GPA Grafikleri: Öğrenci ana sayfasında ders bazında ortalama notları gösteren interaktif bar grafik eklendi (Alt başlangıç çizgisi doğru ayarlanamadığı için sütun beklenenden yüksekte gözüküyor).
+  
+
+

@@ -1,6 +1,7 @@
 ﻿@page "/"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using Microsoft.AspNetCore.Components.Authorization
+@using Pusula.UI.Components.Charts
 
 <PageTitle>Home</PageTitle>
 
@@ -36,10 +37,24 @@
 
 <AuthorizeView Roles="Student">
     <Authorized>
-        <ul>
-            <li><a href="/courses">Courses</a></li>
-            <li><a href="/grades">My Grades</a></li>
-            <li><a href="/absences">My Absences</a></li>
-        </ul>
+        <div class="row">
+            <div class="col-md-8">
+                <GpaChart />
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><a href="/courses" class="btn btn-outline-primary btn-sm w-100">View Courses</a></li>
+                            <li class="mb-2"><a href="/grades" class="btn btn-outline-success btn-sm w-100">My Grades</a></li>
+                            <li class="mb-2"><a href="/absences" class="btn btn-outline-warning btn-sm w-100">My Absences</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
     </Authorized>
 </AuthorizeView>

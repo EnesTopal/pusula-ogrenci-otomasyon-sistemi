@@ -1,0 +1,242 @@
+@using Pusula.UI.Services
+@inject GpaService GpaService
+@inject AuthStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using System.Globalization
+
+<div class="gpa-chart-container">
+    <h4>GPA by Course</h4>
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (gpaData?.Any() == true)
+    {
+        <div class="chart-container">
+            <div class="chart-wrapper">
+                <div class="y-axis">
+                    <div class="y-label">100</div>
+                    <div class="y-label">90</div>
+                    <div class="y-label">80</div>
+                    <div class="y-label">70</div>
+                    <div class="y-label">60</div>
+                    <div class="y-label">50</div>
+                    <div class="y-label">40</div>
+                    <div class="y-label">30</div>
+                    <div class="y-label">20</div>
+                    <div class="y-label">10</div>
+                    <div class="y-label">0</div>
+                </div>
+                <div class="chart-area">
+                    <div class="bars-container">
+                        @foreach (var course in gpaData)
+                        {
+                            var percent = Math.Clamp(course.AverageGrade, 0, 100);
+
+                            <div class="bar-wrapper">
+                                <div class="bar-value"
+                                     style="--bar-height:@percent.ToString(CultureInfo.InvariantCulture)">
+                                    <div class="bar-tooltip">
+                                        @course.AverageGrade.ToString("F1") (@course.GradeCount grades)
+                                    </div>
+                                </div>
+                                <div class="bar-label">@course.CourseName</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <p>No grade data available to display.</p>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CourseGpaDto>? gpaData;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGpaData();
+    }
+
+    private async Task LoadGpaData()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            
+            if (user.Identity?.IsAuthenticated == true && user.IsInRole("Student"))
+            {
+                gpaData = await GpaService.GetGpaByCourseAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading GPA data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+
+<style>
+    .gpa-chart-container {
+        margin: 20px 0;
+    }
+
+    .gpa-chart-container h4 {
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .chart-container {
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .chart-wrapper {
+        display: flex;
+        height: 400px;
+        width: 100%;
+    }
+
+    /* ortak dikey padding: y-axis ve chart-area aynı ölçekle hizalansın */
+    :root { --vpad: 20px; }
+
+    .y-axis {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 40px;
+        margin-right: 10px;
+        padding-top: var(--vpad);
+        padding-bottom: var(--vpad);
+        box-sizing: border-box;
+    }
+
+    .y-label {
+        font-size: 12px;
+        color: #666;
+        text-align: right;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .chart-area {
+        flex: 1;
+        position: relative;
+        border-left: 1px solid #e0e0e0;
+        border-bottom: 1px solid #e0e0e0;
+        /* y-axis ile aynı dikey boşluk; yüzde yükseklik doğru hesaplansın */
+        padding: var(--vpad) 0 var(--vpad) 10px;
+        box-sizing: border-box;
+    }
+
+    .bars-container {
+        display: flex;
+        height: 100%;
+        align-items: flex-end;
+        justify-content: space-around;
+        padding: 0 10px;
+    }
+
+    .bar-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        max-width: 120px;
+        margin: 0 5px;
+        height: 100%;
+        justify-content: flex-end; /* içerik alta otursun */
+        box-sizing: border-box;
+    }
+
+    .bar-value {
+        width: 100%;
+        background: linear-gradient(to top, #4CAF50, #8BC34A);
+        border-radius: 4px 4px 0 0;
+        position: relative;
+        min-height: 2px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        /* yüzde ölçek: --bar-height (0–100) InvariantCulture ile yazılmalı */
+        height: calc(var(--bar-height, 0) * 1%);
+    }
+
+    .bar-value:hover {
+        background: linear-gradient(to top, #45a049, #7CB342);
+        transform: scale(1.05);
+    }
+
+    .bar-tooltip {
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        z-index: 1000;
+    }
+
+    .bar-value:hover .bar-tooltip {
+        opacity: 1;
+    }
+
+    .bar-label {
+        margin-top: 8px;
+        font-size: 11px;
+        color: #666;
+        text-align: center;
+        word-wrap: break-word;
+        line-height: 1.2;
+        max-width: 100px;
+    }
+
+    /* Responsive design */
+    @@media (max-width: 768px) {
+        .chart-wrapper {
+            height: 300px;
+        }
+
+        .bar-wrapper {
+            max-width: 80px;
+            margin: 0 2px;
+        }
+
+        .bar-label {
+            font-size: 10px;
+            max-width: 70px;
+        }
+
+        .y-label {
+            font-size: 10px;
+        }
+    }
+</style>
+

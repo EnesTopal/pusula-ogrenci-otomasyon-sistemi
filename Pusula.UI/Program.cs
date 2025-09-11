@@ -28,6 +28,9 @@ builder.Services.AddHttpClient<ApiClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5077/");
 });
 
+// Add custom services
+builder.Services.AddScoped<GpaService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
